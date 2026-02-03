@@ -1,0 +1,7 @@
+{
+  "name": "TirolJob Hunter",
+  "description": "An AI-powered job search engine specifically designed for the Tirol and Innsbruck region, utilizing Gemini's Google Search grounding to fetch live listings from top portals like TT, ÖH, and TirolJobs.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
