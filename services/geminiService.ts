@@ -6,7 +6,9 @@ export class GeminiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // Prioritize GEMINI_KEY as requested, fallback to API_KEY
+    const apiKey = process.env.GEMINI_KEY || process.env.API_KEY || '';
+    this.ai = new GoogleGenAI({ apiKey: apiKey });
   }
 
   private extractJson(text: string): any {
@@ -96,7 +98,7 @@ export class GeminiService {
     `;
 
     try {
-      const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const genAI = new GoogleGenAI({ apiKey: this.ai.apiKey });
       
       const response = await genAI.models.generateContent({
         model: 'gemini-3-flash-preview', 
