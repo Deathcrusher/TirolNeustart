@@ -6,8 +6,33 @@ export class GeminiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    // Prioritize GEMINI_KEY as requested, fallback to API_KEY
-    const apiKey = process.env.GEMINI_KEY || process.env.API_KEY || '';
+    // ABSTURZSICHERER KEY-ZUGRIFF
+    // Browser kennen oft 'process' nicht -> White Screen Fix
+    let apiKey = '';
+
+    // 1. Check: Vite (import.meta.env)
+    try {
+        // @ts-ignore
+        if (typeof import.meta !== 'undefined' && import.meta.env) {
+            // @ts-ignore
+            apiKey = import.meta.env.VITE_GEMINI_KEY || import.meta.env.GEMINI_KEY || '';
+        }
+    } catch (e) {}
+
+    // 2. Check: Create React App / Webpack / Node (process.env)
+    if (!apiKey) {
+        try {
+            if (typeof process !== 'undefined' && process.env) {
+                apiKey = process.env.GEMINI_KEY || 
+                         process.env.VITE_GEMINI_KEY || 
+                         process.env.REACT_APP_GEMINI_KEY || 
+                         process.env.API_KEY || '';
+            }
+        } catch (e) {}
+    }
+
+    // Fallback: Wenn kein Key da ist, nicht abstürzen, sondern leer initialisieren.
+    // Der Fehler kommt dann erst beim Suchen (bessere UX als White Screen).
     this.ai = new GoogleGenAI({ apiKey: apiKey });
   }
 
@@ -98,6 +123,11 @@ export class GeminiService {
     `;
 
     try {
+      // Key-Check vor dem Call
+      if (!this.ai.apiKey) {
+          throw new Error("API Key fehlt. Bitte VITE_GEMINI_KEY in Vercel setzen.");
+      }
+
       const genAI = new GoogleGenAI({ apiKey: this.ai.apiKey });
       
       const response = await genAI.models.generateContent({
