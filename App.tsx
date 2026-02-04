@@ -15,6 +15,14 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  const getFriendlyError = (err: any) => {
+    const message = err?.message || '';
+    if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+      return 'Gemini API-Limit erreicht (429). Bitte prüfe dein Google AI Studio Quota/Billing und warte kurz, bevor du erneut suchst.';
+    }
+    return `Hoppla, da lief was schief: ${message || 'Unbekannter Fehler'}.`;
+  };
+
   // Initial search tailored to the user's goal
   useEffect(() => {
     handleSearch(undefined, "Jobs für Quereinsteiger ohne Ausbildung Innsbruck");
@@ -43,7 +51,7 @@ const App: React.FC = () => {
         setError("Keine passenden Einstiegs-Jobs gefunden. Versuch es mal mit einer anderen Kategorie.");
       }
     } catch (err: any) {
-      setError(`Hoppla, da lief was schief: ${err?.message || 'Unbekannter Fehler'}.`);
+      setError(getFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -72,6 +80,7 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Load more error", err);
+      setError(getFriendlyError(err));
     } finally {
       setLoadingMore(false);
     }
