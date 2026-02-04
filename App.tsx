@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { geminiService } from './services/geminiService';
 import { JobListing, GroundingSource } from './types';
 import JobCard from './components/JobCard';
@@ -14,17 +14,20 @@ const App: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const initialSearchDone = useRef(false);
 
   const getFriendlyError = (err: any) => {
     const message = err?.message || '';
     if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
-      return 'Gemini API-Limit erreicht (429). Bitte prüfe dein Google AI Studio Quota/Billing und warte kurz, bevor du erneut suchst.';
+      return 'Gemini API-Limit erreicht (429). Falls ein geteilter Free-Key verwendet wird, kann das Tageslimit schnell aufgebraucht sein. Prüfe Google AI Studio Quota/Billing oder hinterlege einen eigenen API-Key und versuche es später erneut.';
     }
     return `Hoppla, da lief was schief: ${message || 'Unbekannter Fehler'}.`;
   };
 
   // Initial search tailored to the user's goal
   useEffect(() => {
+    if (initialSearchDone.current) return;
+    initialSearchDone.current = true;
     handleSearch(undefined, "Jobs für Quereinsteiger ohne Ausbildung Innsbruck");
   }, []);
 
