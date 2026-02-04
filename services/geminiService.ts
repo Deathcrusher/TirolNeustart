@@ -3,11 +3,17 @@ import { GoogleGenAI } from "@google/genai";
 import { SearchResult, JobListing, GroundingSource } from "../types";
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | null = null;
 
   constructor() {
-    // ABSTURZSICHERER KEY-ZUGRIFF
-    // Browser kennen oft 'process' nicht -> White Screen Fix
+    // Wir initialisieren hier NICHTS mehr.
+    // Das verhindert, dass die App beim Start crasht (White Screen),
+    // falls Umgebungsvariablen noch nicht geladen sind.
+  }
+
+  private getClient(): GoogleGenAI {
+    if (this.ai) return this.ai;
+
     let apiKey = '';
 
     // 1. Check: Vite (import.meta.env)
@@ -31,9 +37,10 @@ export class GeminiService {
         } catch (e) {}
     }
 
-    // Fallback: Wenn kein Key da ist, nicht abstürzen, sondern leer initialisieren.
-    // Der Fehler kommt dann erst beim Suchen (bessere UX als White Screen).
+    // Wenn Key fehlt, erstellen wir den Client trotzdem, aber der Call wird später fehlschlagen.
+    // Das fangen wir im UI ab.
     this.ai = new GoogleGenAI({ apiKey: apiKey });
+    return this.ai;
   }
 
   private extractJson(text: string): any {
@@ -50,87 +57,55 @@ export class GeminiService {
     }
   }
 
-  // Hilfsfunktion: URL bereinigen für den Vergleich (entfernt Parameter und Protokoll)
   private normalizeUrl(url: string): string {
     try {
         const u = new URL(url);
-        // Wir vergleichen nur Hostname + Pfad, ohne Query-Params und ohne Trailing Slash
         return (u.hostname + u.pathname).replace(/\/$/, '').toLowerCase();
     } catch (e) {
         return url.toLowerCase();
     }
   }
 
-  // Validierung: Filtert nur echte "Müll"-Seiten raus, ist aber toleranter bei Job-URLs
   private isValidJobUrl(url: string): boolean {
     if (!url || url.length < 10) return false; 
-    
     const lower = url.toLowerCase();
-    
-    // Wir blockieren nur explizite Suchseiten, Login, Filter
     const badPatterns = [
       '/suche', '/search', 'query=', '?q=', 'keywords=', 
       'stellenangebote/suche', 'job-search', 'result', 
       'facets', 'sort=', 'page=', 'filter', 'login', 'register',
       'job-alarm', 'bewerbung', 'anmelden'
     ];
-    
     if (badPatterns.some(p => lower.includes(p))) return false;
-
-    // Keine harten Regeln mehr wie "muss /job/ enthalten", da das zu viele echte Treffer killt.
-    // Aber wir checken, ob es eine valide URL ist
     try {
         const urlObj = new URL(url);
         if (urlObj.pathname === '/' || urlObj.pathname.length < 2) return false;
     } catch (e) {
         return false;
     }
-
     return true;
   }
 
   async searchJobs(query: string, portalPreference?: string, currentJobCount: number = 0): Promise<SearchResult> {
     const siteOperators = '(site:jobs.tt.com OR site:tirolerjobs.at OR site:karriere.at/j OR site:oehboerse.at OR site:amtsblatt.tirol.gv.at OR site:meinbezirk.at/jobs)';
     const cleanQuery = query.replace(/[^\w\säöüÄÖÜß]/g, '').trim(); 
-    
-    // Query etwas offener gestalten, damit wir mehr Ergebnisse bekommen
     const promptQuery = `"${cleanQuery}" jobs innsbruck tirol ${siteOperators}`;
 
     const systemInstruction = `
       Du bist ein Job-Such-Assistent.
-      
-      AUFGABE:
-      Finde konkrete Stellenanzeigen.
-      
-      WICHTIG:
-      - Nutze die 'googleSearch' Ergebnisse.
-      - Extrahiere die URL exakt so, wie sie im Suchergebnis steht.
-      - Ignoriere reine Übersichtsseiten (z.B. "Alle Jobs in Tirol").
-      
-      ANTWORT (JSON):
-      {
-        "summary": "Kurze Zusammenfassung",
-        "jobs": [
-          {
-            "title": "Titel",
-            "company": "Firma",
-            "location": "Ort",
-            "url": "URL",
-            "snippet": "Beschreibung"
-          }
-        ]
-      }
+      AUFGABE: Finde konkrete Stellenanzeigen.
+      WICHTIG: Nutze 'googleSearch' Ergebnisse. Extrahiere URLs exakt.
+      ANTWORT (JSON): { "summary": "...", "jobs": [{ "title": "...", "company": "...", "location": "...", "url": "...", "snippet": "..." }] }
     `;
 
     try {
-      // Key-Check vor dem Call
-      if (!this.ai.apiKey) {
-          throw new Error("API Key fehlt. Bitte VITE_GEMINI_KEY in Vercel setzen.");
+      const ai = this.getClient();
+      
+      // Expliziter Check für bessere UX Fehlermeldung
+      if (!ai.apiKey) {
+          throw new Error("API Key fehlt (VITE_GEMINI_KEY). Bitte in Vercel Settings prüfen.");
       }
 
-      const genAI = new GoogleGenAI({ apiKey: this.ai.apiKey });
-      
-      const response = await genAI.models.generateContent({
+      const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview', 
         contents: `Suche die 10 besten Job-Links für: ${promptQuery}.`,
         config: {
@@ -150,9 +125,7 @@ export class GeminiService {
           uri: chunk.web.uri
         }));
 
-      // Fallback, falls JSON leer ist oder fehlschlägt, aber Quellen da sind
       if ((!rawJson || !rawJson.jobs || rawJson.jobs.length === 0) && sources.length > 0) {
-          // Wir bauen provisorische Jobs aus den Quellen, wenn die KI das JSON verhauen hat
           const fallbackJobs = sources
             .filter(s => this.isValidJobUrl(s.uri))
             .slice(0, 8)
@@ -183,35 +156,24 @@ export class GeminiService {
         };
       }
 
-      // "Fuzzy" Validierung
       const validatedJobs = (rawJson.jobs || [])
         .map((j: any, index: number) => {
             let verifiedUrl = null;
             const normJ = this.normalizeUrl(j.url);
-
-            // Wir suchen in den echten Quellen nach einem Match
             const match = sources.find(s => {
                 const normS = this.normalizeUrl(s.uri);
-                // Ist die eine URL in der anderen enthalten? (deckt Parameter ab)
                 return normS.includes(normJ) || normJ.includes(normS);
             });
 
-            if (match) {
-                verifiedUrl = match.uri; // Nimm IMMER die echte Source-URL
-            } else {
-                // Wenn kein URL Match, versuchen wir Titel-Match als letzten Ausweg
+            if (match) verifiedUrl = match.uri;
+            else {
                 const titleMatch = sources.find(s => 
                      s.title.toLowerCase().includes(j.title.toLowerCase().substring(0, 15))
                 );
                 if (titleMatch) verifiedUrl = titleMatch.uri;
             }
 
-            // Wenn immer noch null, aber die URL sieht valide aus (kein Search), lassen wir sie durch
-            // Das ist der Kompromiss: Lieber ein Ergebnis mehr als gar keines.
-            if (!verifiedUrl && this.isValidJobUrl(j.url)) {
-                verifiedUrl = j.url;
-            }
-
+            if (!verifiedUrl && this.isValidJobUrl(j.url)) verifiedUrl = j.url;
             if (!verifiedUrl || !this.isValidJobUrl(verifiedUrl)) return null;
 
             return {
