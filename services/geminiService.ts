@@ -4,6 +4,8 @@ import { SearchResult, JobListing, GroundingSource } from "../types";
 
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
+  private lastRequestTime = 0;
+  private readonly minRequestIntervalMs = 1500;
 
   constructor() {
     // Wir initialisieren hier NICHTS mehr.
@@ -98,6 +100,13 @@ export class GeminiService {
     `;
 
     try {
+      const now = Date.now();
+      const waitMs = this.minRequestIntervalMs - (now - this.lastRequestTime);
+      if (waitMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+      }
+      this.lastRequestTime = Date.now();
+
       const ai = this.getClient();
       
       // Expliziter Check für bessere UX Fehlermeldung
