@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { geminiService } from './services/geminiService';
+import { joobleService } from './services/joobleService';
 import { JobListing, GroundingSource } from './types';
 import JobCard from './components/JobCard';
 
@@ -15,6 +16,29 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const initialSearchDone = useRef(false);
+  
+  // Settings state
+  const [showSettings, setShowSettings] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [useJoobleOnly, setUseJoobleOnly] = useState(false);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedApiKey = localStorage.getItem('gemini_api_key') || '';
+      const savedUseJooble = localStorage.getItem('use_jooble_only') === 'true';
+      setGeminiApiKey(savedApiKey);
+      setUseJoobleOnly(savedUseJooble);
+    } catch (e) {}
+  }, []);
+
+  const saveSettings = () => {
+    try {
+      localStorage.setItem('gemini_api_key', geminiApiKey);
+      localStorage.setItem('use_jooble_only', String(useJoobleOnly));
+      setShowSettings(false);
+    } catch (e) {}
+  };
 
   const getFriendlyError = (err: any) => {
     const message = err?.message || '';
@@ -46,7 +70,20 @@ const App: React.FC = () => {
     setActiveQuery(targetQuery);
 
     try {
-      const data = await geminiService.searchJobs(targetQuery, undefined, 0);
+      let data;
+      
+      // Use Jooble API if enabled, otherwise use Gemini with web scraping
+      if (useJoobleOnly) {
+        const joobleJobs = await joobleService.searchJobs(targetQuery, 'Tirol', 0);
+        data = {
+          jobs: joobleJobs,
+          summary: `Jooble Ergebnisse für "${targetQuery}":`,
+          groundingSources: []
+        };
+      } else {
+        data = await geminiService.searchJobs(targetQuery, undefined, 0);
+      }
+      
       setJobs(data.jobs);
       setSummary(data.summary);
       setSources(data.groundingSources);
@@ -66,7 +103,18 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const data = await geminiService.searchJobs(activeQuery, undefined, jobs.length);
+      let data;
+      
+      // Use Jooble API if enabled, otherwise use Gemini with web scraping
+      if (useJoobleOnly) {
+        const joobleJobs = await joobleService.searchJobs(activeQuery, 'Tirol', Math.floor(jobs.length / 10));
+        data = {
+          jobs: joobleJobs,
+          groundingSources: []
+        };
+      } else {
+        data = await geminiService.searchJobs(activeQuery, undefined, jobs.length);
+      }
       
       const currentUrls = new Set(jobs.map(j => j.url));
       const newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
@@ -112,8 +160,86 @@ const App: React.FC = () => {
                 <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Dein Weg zum neuen Job</p>
              </div>
           </div>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded-lg transition-colors text-sm font-semibold"
+          >
+            <i className="fas fa-cog"></i>
+            <span className="hidden md:inline">Einstellungen</span>
+          </button>
         </div>
       </nav>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i className="fas fa-cog text-emerald-500"></i>
+                Einstellungen
+              </h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors"
+              >
+                <i className="fas fa-times text-slate-500"></i>
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Gemini API Key Setting */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  <i className="fas fa-key text-emerald-500 mr-2"></i>
+                  Gemini API Key
+                </label>
+                <input
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="Gib deinen API Key ein..."
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition-all font-medium"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  Hol dir deinen kostenlosen API Key bei{' '}
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
+                    Google AI Studio
+                  </a>
+                </p>
+              </div>
+
+              {/* Jooble Only Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-briefcase"></i>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">Jooble API verwenden</p>
+                    <p className="text-xs text-slate-500">Nur Jooble Jobs anzeigen</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setUseJoobleOnly(!useJoobleOnly)}
+                  className={`relative w-14 h-8 rounded-full transition-colors ${useJoobleOnly ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                >
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${useJoobleOnly ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={saveSettings}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-200"
+              >
+                <i className="fas fa-save mr-2"></i>
+                Speichern
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="bg-white border-b border-slate-200 pb-8 pt-6 px-4">
