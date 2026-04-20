@@ -2,6 +2,7 @@ import { JobListing } from '../types';
 
 const JOOBLE_PROXY_BASE_URL = '/api/jooble';
 const JOOBLE_DIRECT_BASE_URL = 'https://jooble.org/api';
+const RESULTS_PER_PAGE = 10;
 
 export interface JoobleJob {
   id: string;
@@ -57,40 +58,16 @@ export class JoobleService {
       }
 
       const encodedApiKey = encodeURIComponent(apiKey);
-      const requestBody = JSON.stringify({
-        keywords: query,
-        location: location,
-        radius: 40,
-        // Jooble API erwartet 0-basierte Seitennummern.
-        // page=0 muss die erste Ergebnisseite laden.
-        page: page,
-        ResultOnPage: 10,
-      });
+      const searchLocations = this.getSearchLocations(location);
+      let data: any = null;
 
-      let response = await fetch(`${JOOBLE_PROXY_BASE_URL}/${encodedApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-      });
+      for (const searchLocation of searchLocations) {
+        data = await this.fetchJooble(encodedApiKey, query, searchLocation, page);
 
-      // Fallback für Deployments ohne aktiven Vite-Proxy (z. B. Produktion).
-      if (response.status === 404) {
-        response = await fetch(`${JOOBLE_DIRECT_BASE_URL}/${encodedApiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: requestBody,
-        });
+        if (Array.isArray(data.jobs) && data.jobs.length > 0) {
+          break;
+        }
       }
-
-      if (!response.ok) {
-        throw new Error(`Jooble API Error: ${response.status} ${response.statusText}`.trim());
-      }
-
-      const data = await response.json();
       
       if (!data.jobs || !Array.isArray(data.jobs)) {
         return [];
@@ -104,7 +81,7 @@ export class JoobleService {
         snippet: job.snippet || 'Details im Inserat',
         url: job.link || job.url || '#',
         source: 'Jooble',
-        date: job.posted ? this.formatDate(job.posted) : 'Aktuell',
+        date: job.updated ? this.formatDate(job.updated) : job.posted ? this.formatDate(job.posted) : 'Aktuell',
         category: 'Quereinsteiger',
       }));
     } catch (error) {
@@ -114,6 +91,54 @@ export class JoobleService {
       }
       throw error instanceof Error ? error : new Error('Unbekannter Jooble Fehler');
     }
+  }
+
+  private async fetchJooble(encodedApiKey: string, query: string, location: string, page: number) {
+    const requestBody = JSON.stringify({
+      keywords: query.trim(),
+      location,
+      radius: '40',
+      page: String(page + 1),
+      ResultOnPage: String(RESULTS_PER_PAGE),
+      companysearch: 'false',
+    });
+
+    let response = await fetch(`${JOOBLE_PROXY_BASE_URL}/${encodedApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: requestBody,
+    });
+
+    // Fallback für Deployments ohne aktiven Vite-Proxy (z. B. Produktion).
+    if (response.status === 404) {
+      response = await fetch(`${JOOBLE_DIRECT_BASE_URL}/${encodedApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      });
+    }
+
+    if (!response.ok) {
+      throw new Error(`Jooble API Error: ${response.status} ${response.statusText}`.trim());
+    }
+
+    return response.json();
+  }
+
+  private getSearchLocations(location: string): string[] {
+    const normalized = location.trim();
+    const locations = [
+      normalized,
+      'Tirol, Österreich',
+      'Innsbruck, Tirol',
+      'Innsbruck',
+    ].filter(Boolean);
+
+    return [...new Set(locations)];
   }
 
   private formatDate(dateStr: string): string {
