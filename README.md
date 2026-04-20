@@ -4,9 +4,10 @@ Eine moderne React-App zur Jobsuche für Quereinsteiger in Tirol.
 
 ## Features
 
-- **Jooble API Integration** (Standard) - Direkte Jobsuche über die offizielle Jooble REST API
+- **Schnelle Suche** (Standard) - Kombiniert eigene Backend-Scraper mit Jooble
+- **Eigene Scraper-Pipeline** - Erste modulare Quelle über `karriere.at`, erweiterbar um weitere Adapter
 - **Google Gemini KI-Suche** (Optional) - Intelligente Suche mit KI-Unterstützung
-- **Umschaltbare Suchmodi** - Wechsle zwischen Jooble und KI-Suche
+- **Umschaltbare Suchmodi** - Wechsle zwischen schneller Backend-Suche und KI-Suche
 - **Lokale API-Key Speicherung** - Gemini Key wird sicher im Browser gespeichert
 - **Responsives Design** - Optimiert für Mobile und Desktop
 - **Kategorien-Filter** - Vorgefertigte Suchen für verschiedene Berufsfelder
@@ -31,11 +32,12 @@ npm run build
 
 ## Nutzung
 
-### Jooble-Suche (Standard)
-- Benötigt einen eigenen Jooble API-Key (in den Einstellungen eintragen)
-- Durchsucht Jooble.org nach Jobs in Tirol
-- Verwendet im Dev-Modus einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
-- Verwendet den offiziellen Endpoint `POST /api/{api_key}` mit `keywords`/`location`
+### Schnelle Suche (Standard)
+- Nutzt `/api/search-jobs`, um eigene Scraper und Jooble zu kombinieren
+- Funktioniert auch ohne Jooble-Key über den ersten eigenen Scraper (`karriere.at`)
+- Mit Jooble-Key werden zusätzlich Jooble-Ergebnisse gemischt und dedupliziert
+- Verwendet im Dev-Modus für Jooble weiterhin einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
+- Siehe auch `docs/scraper-strategy.md`
 
 ### Gemini KI-Suche (Optional)
 1. Klicke auf das Zahnrad-Icon oben rechts

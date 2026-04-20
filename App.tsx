@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { geminiService } from './services/geminiService';
 import { joobleService } from './services/joobleService';
+import { jobSearchService } from './services/jobSearchService';
 import { JobListing, GroundingSource } from './types';
 import JobCard from './components/JobCard';
 
@@ -118,12 +119,7 @@ const App: React.FC = () => {
       
       // Use Jooble API if enabled, otherwise use Gemini with web scraping
       if (useJoobleOnly) {
-        const joobleJobs = await joobleService.searchJobs(targetQuery, location, 0);
-        data = {
-          jobs: joobleJobs,
-          summary: `Jooble Ergebnisse für "${targetQuery}" in ${location}:`,
-          groundingSources: []
-        };
+        data = await jobSearchService.searchJobs(targetQuery, location, 0);
       } else {
         data = await geminiService.searchJobs(targetQuery, undefined, 0, location);
       }
@@ -151,11 +147,7 @@ const App: React.FC = () => {
       
       // Use Jooble API if enabled, otherwise use Gemini with web scraping
       if (useJoobleOnly) {
-        const joobleJobs = await joobleService.searchJobs(activeQuery, activeLocation, Math.floor(jobs.length / 10));
-        data = {
-          jobs: joobleJobs,
-          groundingSources: []
-        };
+        data = await jobSearchService.searchJobs(activeQuery, activeLocation, Math.floor(jobs.length / 10));
       } else {
         data = await geminiService.searchJobs(activeQuery, undefined, jobs.length, activeLocation, {
           knownUrls: jobs.map(job => job.url)
@@ -297,15 +289,15 @@ const App: React.FC = () => {
                 </p>
               </div>
 
-              {/* Jooble Only Toggle */}
+              {/* Fast Search Toggle */}
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
                     <i className="fas fa-briefcase"></i>
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800 text-sm">Jooble API verwenden</p>
-                    <p className="text-xs text-slate-500">Nur Jooble Jobs anzeigen</p>
+                    <p className="font-bold text-slate-800 text-sm">Schnelle Suche verwenden</p>
+                    <p className="text-xs text-slate-500">Eigene Scraper und Jooble kombinieren</p>
                   </div>
                 </div>
                 <button

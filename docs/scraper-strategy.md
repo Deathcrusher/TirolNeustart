@@ -194,6 +194,18 @@ The current project is mostly frontend plus small API proxy code. A real scraper
 9. Add Gemini background enrichment.
 10. Add monitoring/logging for broken sources.
 
+## Current Prototype
+
+The first implementation step now exists:
+
+- `/api/search-jobs.js` aggregates provider results.
+- `server/jobSources/karriereAt.js` is the first custom fetch-based scraper.
+- `server/jobSources/index.js` is the source registry.
+- `server/jobs/dedupe.js` removes duplicate jobs before returning results.
+- `services/jobSearchService.ts` lets the frontend call the backend aggregator and fall back to Jooble in local/dev environments.
+
+The current custom scraper is intentionally small. It proves the adapter pattern and can be extended source by source.
+
 ## Practical Warning
 
 "Scrape all job sites" is a product goal, not one implementation task. The maintainable version is:
