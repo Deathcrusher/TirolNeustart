@@ -4,6 +4,7 @@ import { dedupeJobs } from '../server/jobs/dedupe.js';
 const JOOBLE_BASE_URL = 'https://jooble.org/api';
 const RESULTS_PER_PAGE = 20;
 const SOURCE_URIS = {
+  'jobs.tt.com': 'https://jobs.tt.com/job',
   'karriere.at': 'https://www.karriere.at/jobs/tirol',
   'METAJob': 'https://www.metajob.at',
   'Indeed AT': 'https://at.indeed.com',

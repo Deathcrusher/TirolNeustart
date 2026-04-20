@@ -6,7 +6,15 @@ export function decodeHtml(value = '') {
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ');
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&auml;/g, 'ä')
+    .replace(/&Auml;/g, 'Ä')
+    .replace(/&ouml;/g, 'ö')
+    .replace(/&Ouml;/g, 'Ö')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&szlig;/g, 'ß')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
 }
 
 export function stripTags(value = '') {

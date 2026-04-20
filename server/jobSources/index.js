@@ -1,8 +1,10 @@
 import { indeedAtSource } from './indeedAt.js';
+import { jobsTtSource } from './jobsTt.js';
 import { karriereAtSource } from './karriereAt.js';
 import { metajobSource } from './metajob.js';
 
 const SOURCES = [
+  jobsTtSource,
   karriereAtSource,
   metajobSource,
   indeedAtSource,

@@ -199,6 +199,7 @@ The current project is mostly frontend plus small API proxy code. A real scraper
 The first implementation step now exists:
 
 - `/api/search-jobs.js` aggregates provider results.
+- `server/jobSources/jobsTt.js` adds TT Jobs through its server-rendered search result page.
 - `server/jobSources/karriereAt.js` is the first custom fetch-based scraper.
 - `server/jobSources/metajob.js` adds METAJob through its preloaded search state.
 - `server/jobSources/indeedAt.js` is registered defensively, but Indeed currently blocks automated server fetches from this environment.
