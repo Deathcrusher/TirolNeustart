@@ -23,6 +23,8 @@ React App
     -> Gemini enrichment in background
 ```
 
+For the detailed custom scraping plan, see `docs/scraper-strategy.md`.
+
 ## Why Apify Could Help
 
 Apify can turn job portals into structured JSON sources through reusable or custom actors. This would make providers behave more like APIs and reduce the need for slow live Gemini web searches.
