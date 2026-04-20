@@ -23,9 +23,9 @@ const LOCATION_OPTIONS = [
 const GEMINI_MODEL_OPTIONS = [
   { value: '', label: 'Automatisch' },
   { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite' },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (schnell)' },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-  { value: 'gemma-4-31b-it', label: 'Gemma 4 31B' },
+  { value: 'gemma-4-31b-it', label: 'Gemma 4 31B (gründlicher)' },
   { value: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B' },
 ];
 
@@ -267,7 +267,7 @@ const App: React.FC = () => {
                   ))}
                 </select>
                 <p className="text-xs text-slate-500 mt-2">
-                  Automatisch probiert kompatible Modelle. Gemma 4 ist experimentell, weil nicht jeder Key jedes Modell freigeschaltet hat.
+                  Gemini Flash sucht meist schneller. Gemma 4 kann gründlicher sein, braucht aber oft länger.
                 </p>
               </div>
 

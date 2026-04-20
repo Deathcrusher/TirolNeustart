@@ -9,7 +9,7 @@ export class GeminiService {
   private activeApiKey = '';
   private activeApiKeySource: 'manual' | 'localStorage' | 'env' | 'none' = 'none';
   private lastRequestTime = 0;
-  private readonly minRequestIntervalMs = 3500;
+  private readonly minRequestIntervalMs = 900;
   private readonly cacheTtlMs = 60000;
   private lastResultCache: { query: string; timestamp: number; result: SearchResult } | null = null;
 
@@ -138,7 +138,7 @@ export class GeminiService {
   }
 
   private async generateWithRetry(ai: GoogleGenAI, model: string, contents: string, systemInstruction: string) {
-    const maxAttempts = 3;
+    const maxAttempts = 2;
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -165,7 +165,7 @@ export class GeminiService {
         }
 
         const parsedDelay = this.parseRetryDelayMs(message);
-        const backoffMs = parsedDelay ?? attempt * 3000;
+        const backoffMs = parsedDelay ? Math.min(parsedDelay, 4000) : attempt * 1500;
         await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
     }
@@ -225,16 +225,35 @@ export class GeminiService {
       }
     }
 
-    const siteOperators = '(site:jobs.tt.com OR site:tirolerjobs.at OR site:karriere.at/j OR site:oehboerse.at OR site:amtsblatt.tirol.gv.at OR site:meinbezirk.at/jobs)';
+    const siteOperators = [
+      'site:jobs.tt.com',
+      'site:tirolerjobs.at',
+      'site:karriere.at',
+      'site:jobs.at',
+      'site:hokify.at',
+      'site:stepstone.at',
+      'site:willhaben.at/jobs',
+      'site:at.indeed.com',
+      'site:oehboerse.at',
+      'site:amtsblatt.tirol.gv.at',
+      'site:meinbezirk.at/jobs',
+      'site:ams.at',
+    ].join(' OR ');
     const cleanQuery = trimmedQuery.replace(/[^\w\säöüÄÖÜß]/g, '').trim(); 
     const cleanLocation = location.replace(/[^\w\säöüÄÖÜß]/g, '').trim();
-    const promptQuery = `"${cleanQuery}" jobs ${cleanLocation} tirol ${siteOperators}`;
+    const promptQuery = `"${cleanQuery}" jobs ${cleanLocation} tirol (${siteOperators})`;
+    const resultTarget = 18;
+    const pagingInstruction = currentJobCount > 0
+      ? `Finde weitere neue Treffer ab ungefähr Ergebnis ${currentJobCount + 1}. Wiederhole keine bekannten Top-Treffer.`
+      : 'Finde die besten aktuellen Treffer.';
 
     const systemInstruction = `
       Du bist ein Job-Such-Assistent.
-      AUFGABE: Finde konkrete Stellenanzeigen.
+      AUFGABE: Finde konkrete, direkt anklickbare Stellenanzeigen in Tirol.
       WICHTIG: Nutze 'googleSearch' Ergebnisse. Extrahiere URLs exakt.
-      ANTWORT (JSON): { "summary": "...", "jobs": [{ "title": "...", "company": "...", "location": "...", "url": "...", "snippet": "..." }] }
+      Gib keine Suchseiten, Login-Seiten oder allgemeinen Portalseiten zurück.
+      Bevorzuge Jobs für Quereinsteiger, Hilfskräfte, Verkauf, Büro, Rezeption, Gastro, Pflegeassistenz, Lager, Fahrer und Support.
+      ANTWORT NUR ALS JSON: { "summary": "...", "jobs": [{ "title": "...", "company": "...", "location": "...", "url": "...", "snippet": "..." }] }
     `;
 
     try {
@@ -254,7 +273,7 @@ export class GeminiService {
 
       const response = await this.generateWithModelFallback(
         ai,
-        `Suche die 10 besten Job-Links für: ${promptQuery}.`,
+        `${pagingInstruction} Suche bis zu ${resultTarget} Job-Links für: ${promptQuery}.`,
         systemInstruction
       );
 
@@ -272,11 +291,11 @@ export class GeminiService {
       if ((!rawJson || !rawJson.jobs || rawJson.jobs.length === 0) && sources.length > 0) {
         const fallbackJobs = sources
           .filter(s => this.isValidJobUrl(s.uri))
-          .slice(0, 8)
+          .slice(0, resultTarget)
           .map((s, i) => ({
             title: s.title,
             company: 'Tiroler Arbeitgeber',
-            location: 'Tirol',
+            location: cleanLocation || 'Tirol',
             snippet: 'Klicke hier um das Inserat zu öffnen.',
             url: s.uri,
             source: new URL(s.uri).hostname.replace('www.', ''),
@@ -333,9 +352,31 @@ export class GeminiService {
         })
         .filter((j: any) => j !== null);
 
+      const existingUrls = new Set(validatedJobs.map((j: any) => this.normalizeUrl(j.url)));
+      const sourceFallbackJobs = sources
+        .filter(s => this.isValidJobUrl(s.uri))
+        .filter(s => {
+          const normalizedUrl = this.normalizeUrl(s.uri);
+          if (existingUrls.has(normalizedUrl)) return false;
+          existingUrls.add(normalizedUrl);
+          return true;
+        })
+        .map((s, index) => ({
+          title: s.title,
+          company: 'Tiroler Arbeitgeber',
+          location: cleanLocation || 'Tirol',
+          snippet: 'Direkter Treffer aus der Websuche.',
+          url: s.uri,
+          source: new URL(s.uri).hostname.replace('www.', ''),
+          date: 'Aktuell',
+          id: `source-${Date.now()}-${index}`
+        }));
+
+      const combinedJobs = [...validatedJobs, ...sourceFallbackJobs].slice(0, resultTarget);
+
       const result = {
         summary: rawJson.summary || "Aktuelle Jobangebote:",
-        jobs: validatedJobs,
+        jobs: combinedJobs,
         groundingSources: sources
       };
       if (currentJobCount === 0) {
