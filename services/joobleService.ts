@@ -142,13 +142,20 @@ export class JoobleService {
 
     // Fallback für Deployments ohne aktiven Vite-Proxy (z. B. Produktion).
     if (response.status === 404) {
-      response = await fetch(`${JOOBLE_DIRECT_BASE_URL}/${encodedApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-      });
+      try {
+        response = await fetch(`${JOOBLE_DIRECT_BASE_URL}/${encodedApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: requestBody,
+        });
+      } catch (error) {
+        throw new Error(
+          'Jooble konnte nicht über den App-Proxy erreicht werden und der direkte Browser-Fallback wurde blockiert. ' +
+          'Falls das in Produktion passiert, fehlt wahrscheinlich der /api/jooble Proxy im Deployment.'
+        );
+      }
     }
 
     if (!response.ok) {
