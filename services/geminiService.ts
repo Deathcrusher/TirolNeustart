@@ -7,8 +7,9 @@ export class GeminiService {
   private selectedModel: string | null = null;
   private apiKeyOverride: string | null = null;
   private activeApiKey = '';
+  private activeApiKeySource: 'manual' | 'localStorage' | 'env' | 'none' = 'none';
   private lastRequestTime = 0;
-  private readonly minRequestIntervalMs = 1500;
+  private readonly minRequestIntervalMs = 3500;
   private readonly cacheTtlMs = 60000;
   private lastResultCache: { query: string; timestamp: number; result: SearchResult } | null = null;
 
@@ -26,9 +27,9 @@ export class GeminiService {
     this.selectedModel = null;
   }
 
-  private resolveApiKey(): string {
+  private resolveApiKey(): { key: string; source: 'manual' | 'localStorage' | 'env' | 'none' } {
     if (this.apiKeyOverride) {
-      return this.apiKeyOverride;
+      return { key: this.apiKeyOverride, source: 'manual' };
     }
 
     let apiKey = '';
@@ -37,6 +38,9 @@ export class GeminiService {
     try {
       apiKey = localStorage.getItem('gemini_api_key') || '';
     } catch (e) {}
+    if (apiKey.trim()) {
+      return { key: apiKey.trim(), source: 'localStorage' };
+    }
 
     // 2. Check: Vite (import.meta.env)
     if (!apiKey) {
@@ -44,28 +48,34 @@ export class GeminiService {
         // @ts-ignore
         if (typeof import.meta !== 'undefined' && import.meta.env) {
           // @ts-ignore
-          apiKey = import.meta.env.VITE_GEMINI_KEY || import.meta.env.GEMINI_KEY || '';
+          apiKey = import.meta.env.VITE_GEMINI_KEY || import.meta.env.GEMINI_KEY || import.meta.env.GOOGLE_API_KEY || '';
         }
       } catch (e) {}
     }
 
     // 3. Check: Create React App / Webpack / Node (process.env)
+    // WICHTIG: Kein Fallback auf generisches API_KEY, um versehentliche Shared-Keys zu vermeiden.
     if (!apiKey) {
       try {
         if (typeof process !== 'undefined' && process.env) {
           apiKey = process.env.GEMINI_KEY || 
+                   process.env.GEMINI_API_KEY ||
+                   process.env.GOOGLE_API_KEY ||
                    process.env.VITE_GEMINI_KEY || 
-                   process.env.REACT_APP_GEMINI_KEY || 
-                   process.env.API_KEY || '';
+                   process.env.REACT_APP_GEMINI_KEY || '';
         }
       } catch (e) {}
     }
 
-    return apiKey.trim();
+    if (apiKey.trim()) {
+      return { key: apiKey.trim(), source: 'env' };
+    }
+
+    return { key: '', source: 'none' };
   }
 
   private getClient(): GoogleGenAI {
-    const apiKey = this.resolveApiKey();
+    const { key: apiKey, source } = this.resolveApiKey();
 
     if (this.ai && this.activeApiKey === apiKey) {
       return this.ai;
@@ -73,6 +83,7 @@ export class GeminiService {
 
     this.ai = new GoogleGenAI({ apiKey });
     this.activeApiKey = apiKey;
+    this.activeApiKeySource = source;
     return this.ai;
   }
 
@@ -91,17 +102,11 @@ export class GeminiService {
       : defaultCandidates;
 
     let lastError: unknown = null;
+    const missingModelErrors: string[] = [];
 
     for (const model of modelCandidates) {
       try {
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config: {
-            systemInstruction,
-            tools: [{ googleSearch: {} }],
-          },
-        });
+        const response = await this.generateWithRetry(ai, model, contents, systemInstruction);
         this.selectedModel = model;
         return response;
       } catch (error: any) {
@@ -109,17 +114,78 @@ export class GeminiService {
         const isMissingModel =
           message.includes('not found') ||
           message.includes('unsupported') ||
-          message.includes('INVALID_ARGUMENT');
+          message.includes('INVALID_ARGUMENT') ||
+          message.includes('404');
+        const isRetryable =
+          message.includes('429') ||
+          message.includes('RESOURCE_EXHAUSTED') ||
+          message.includes('503') ||
+          message.includes('UNAVAILABLE');
 
-        if (!isMissingModel) {
+        if (!isMissingModel && !isRetryable) {
           throw error;
+        }
+
+        if (isMissingModel) {
+          missingModelErrors.push(`${model}: ${message}`);
         }
 
         lastError = error;
       }
     }
 
+    if (missingModelErrors.length === modelCandidates.length) {
+      throw new Error(
+        `Kein kompatibles Gemini-Modell gefunden. Getestet: ${modelCandidates.join(', ')}. ` +
+        `Bitte prüfe verfügbare Modelle im Projekt (ListModels).`
+      );
+    }
+
     throw lastError || new Error('Kein kompatibles Gemini-Modell verfügbar.');
+  }
+
+  private parseRetryDelayMs(message: string): number | null {
+    const secMatch = message.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+    if (secMatch) {
+      return Math.ceil(parseFloat(secMatch[1]) * 1000);
+    }
+    return null;
+  }
+
+  private async generateWithRetry(ai: GoogleGenAI, model: string, contents: string, systemInstruction: string) {
+    const maxAttempts = 3;
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            tools: [{ googleSearch: {} }],
+          },
+        });
+      } catch (error: any) {
+        lastError = error;
+        const message = String(error?.message || '');
+        const isRetryable =
+          message.includes('429') ||
+          message.includes('RESOURCE_EXHAUSTED') ||
+          message.includes('503') ||
+          message.includes('UNAVAILABLE');
+
+        if (!isRetryable || attempt === maxAttempts) {
+          throw error;
+        }
+
+        const parsedDelay = this.parseRetryDelayMs(message);
+        const backoffMs = parsedDelay ?? attempt * 3000;
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+
+    throw lastError || new Error('Gemini Request fehlgeschlagen.');
   }
 
   private extractJson(text: string): any {
@@ -193,9 +259,9 @@ export class GeminiService {
       this.lastRequestTime = Date.now();
 
       const ai = this.getClient();
-      
+
       // Expliziter Check für bessere UX Fehlermeldung
-      if (!ai.apiKey) {
+      if (!this.activeApiKey) {
         throw new Error("API Key fehlt. Bitte gib deinen Gemini API Key in den Einstellungen ein.");
       }
 
@@ -295,6 +361,13 @@ export class GeminiService {
       return result;
     } catch (error) {
       console.error("Gemini Search Error:", error);
+      const message = String((error as any)?.message || '');
+      if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+        throw new Error(
+          `429 RESOURCE_EXHAUSTED (Key-Quelle: ${this.activeApiKeySource}). Quota ist projektbasiert (nicht key-basiert). ` +
+          `Bitte in Google AI Studio/Cloud Console genau dieses Projekt prüfen (Quota + Billing + erlaubte API-Key-Restriktionen). Original: ${message}`
+        );
+      }
       throw error;
     }
   }
