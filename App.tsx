@@ -29,6 +29,7 @@ const App: React.FC = () => {
       const rawUseJooble = localStorage.getItem('use_jooble_only');
       const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
       setGeminiApiKey(savedApiKey);
+      geminiService.setApiKey(savedApiKey);
       setUseJoobleOnly(savedUseJooble);
     } catch (e) {}
   }, []);
@@ -37,6 +38,7 @@ const App: React.FC = () => {
     try {
       localStorage.setItem('gemini_api_key', geminiApiKey);
       localStorage.setItem('use_jooble_only', String(useJoobleOnly));
+      geminiService.setApiKey(geminiApiKey);
       setShowSettings(false);
     } catch (e) {}
   };

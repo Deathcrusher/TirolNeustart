@@ -5,6 +5,8 @@ import { SearchResult, JobListing, GroundingSource } from "../types";
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
   private selectedModel: string | null = null;
+  private apiKeyOverride: string | null = null;
+  private activeApiKey = '';
   private lastRequestTime = 0;
   private readonly minRequestIntervalMs = 1500;
   private readonly cacheTtlMs = 60000;
@@ -14,8 +16,20 @@ export class GeminiService {
     // Keine Initialisierung hier - API Key wird bei jedem Request geprüft
   }
 
-  private getClient(): GoogleGenAI {
-    if (this.ai) return this.ai;
+  setApiKey(apiKey: string) {
+    const normalized = apiKey.trim();
+    this.apiKeyOverride = normalized || null;
+
+    // Client zurücksetzen, damit bei Key-Wechsel garantiert der neue Key verwendet wird.
+    this.ai = null;
+    this.activeApiKey = '';
+    this.selectedModel = null;
+  }
+
+  private resolveApiKey(): string {
+    if (this.apiKeyOverride) {
+      return this.apiKeyOverride;
+    }
 
     let apiKey = '';
 
@@ -47,7 +61,18 @@ export class GeminiService {
       } catch (e) {}
     }
 
-    this.ai = new GoogleGenAI({ apiKey: apiKey });
+    return apiKey.trim();
+  }
+
+  private getClient(): GoogleGenAI {
+    const apiKey = this.resolveApiKey();
+
+    if (this.ai && this.activeApiKey === apiKey) {
+      return this.ai;
+    }
+
+    this.ai = new GoogleGenAI({ apiKey });
+    this.activeApiKey = apiKey;
     return this.ai;
   }
 
