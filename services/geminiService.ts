@@ -5,10 +5,10 @@ import { SearchResult, JobListing, GroundingSource } from "../types";
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
   private lastRequestTime = 0;
-  private readonly minRequestIntervalMs = 1500;  
-=======
+  private readonly minRequestIntervalMs = 1500;
   private readonly cacheTtlMs = 60000;
-  private lastResultCache: { query: string; timestamp: number; result: SearchResult } | null = null
+  private lastResultCache: { query: string; timestamp: number; result: SearchResult } | null = null;
+
   constructor() {
     // Keine Initialisierung hier - API Key wird bei jedem Request geprüft
   }
