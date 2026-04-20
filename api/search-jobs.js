@@ -5,8 +5,11 @@ const JOOBLE_BASE_URL = 'https://jooble.org/api';
 const RESULTS_PER_PAGE = 20;
 const SOURCE_URIS = {
   'jobs.tt.com': 'https://jobs.tt.com/job',
+  'tirolerjobs.at': 'https://www.tirolerjobs.at/jobs',
+  'hokify.at': 'https://hokify.at/jobs',
   'karriere.at': 'https://www.karriere.at/jobs/tirol',
   'METAJob': 'https://www.metajob.at',
+  'AMS alle jobs': 'https://jobs.ams.at/public/emps/',
   'Indeed AT': 'https://at.indeed.com',
   'Jooble': 'https://jooble.org',
 };

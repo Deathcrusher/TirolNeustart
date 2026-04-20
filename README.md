@@ -5,7 +5,7 @@ Eine moderne React-App zur Jobsuche für Quereinsteiger in Tirol.
 ## Features
 
 - **Schnelle Suche** (Standard) - Kombiniert eigene Backend-Scraper mit Jooble
-- **Eigene Scraper-Pipeline** - Modulare Quellen für `jobs.tt.com`, `karriere.at`, `METAJob` und weitere Adapter
+- **Eigene Scraper-Pipeline** - Modulare Quellen für `jobs.tt.com`, `tirolerjobs.at`, `hokify.at`, `karriere.at`, `METAJob` und weitere Adapter
 - **Google Gemini KI-Suche** (Optional) - Intelligente Suche mit KI-Unterstützung
 - **Umschaltbare Suchmodi** - Wechsle zwischen schneller Backend-Suche und KI-Suche
 - **Lokale API-Key Speicherung** - Gemini Key wird sicher im Browser gespeichert
@@ -34,7 +34,8 @@ npm run build
 
 ### Schnelle Suche (Standard)
 - Nutzt `/api/search-jobs`, um eigene Scraper und Jooble zu kombinieren
-- Funktioniert auch ohne Jooble-Key über eigene Scraper (`jobs.tt.com`, `karriere.at`, `METAJob`)
+- Funktioniert auch ohne Jooble-Key über eigene Scraper (`jobs.tt.com`, `tirolerjobs.at`, `hokify.at`, `karriere.at`, `METAJob`)
+- `AMS alle jobs` ist vorbereitet, blockiert aber aktuell unauthentifizierte Server-API-Anfragen
 - Mit Jooble-Key werden zusätzlich Jooble-Ergebnisse gemischt und dedupliziert
 - Verwendet im Dev-Modus für Jooble weiterhin einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
 - Siehe auch `docs/scraper-strategy.md`

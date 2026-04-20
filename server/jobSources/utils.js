@@ -14,6 +14,7 @@ export function decodeHtml(value = '') {
     .replace(/&uuml;/g, 'ü')
     .replace(/&Uuml;/g, 'Ü')
     .replace(/&szlig;/g, 'ß')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
 }
 

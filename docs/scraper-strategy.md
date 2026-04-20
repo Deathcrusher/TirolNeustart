@@ -200,8 +200,11 @@ The first implementation step now exists:
 
 - `/api/search-jobs.js` aggregates provider results.
 - `server/jobSources/jobsTt.js` adds TT Jobs through its server-rendered search result page.
+- `server/jobSources/tirolerJobs.js` adds tirolerjobs.at through its job sitemap and JobPosting detail pages.
+- `server/jobSources/hokifyAt.js` adds hokify.at through its server-rendered search result page.
 - `server/jobSources/karriereAt.js` is the first custom fetch-based scraper.
 - `server/jobSources/metajob.js` adds METAJob through its preloaded search state.
+- `server/jobSources/amsAt.js` is registered defensively, but AMS alle jobs currently blocks unauthenticated server API requests.
 - `server/jobSources/indeedAt.js` is registered defensively, but Indeed currently blocks automated server fetches from this environment.
 - `server/jobSources/index.js` is the source registry.
 - `server/jobs/dedupe.js` removes duplicate jobs before returning results.

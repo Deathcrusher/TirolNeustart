@@ -1,12 +1,18 @@
+import { amsAtSource } from './amsAt.js';
+import { hokifyAtSource } from './hokifyAt.js';
 import { indeedAtSource } from './indeedAt.js';
 import { jobsTtSource } from './jobsTt.js';
 import { karriereAtSource } from './karriereAt.js';
 import { metajobSource } from './metajob.js';
+import { tirolerJobsSource } from './tirolerJobs.js';
 
 const SOURCES = [
   jobsTtSource,
+  tirolerJobsSource,
+  hokifyAtSource,
   karriereAtSource,
   metajobSource,
+  amsAtSource,
   indeedAtSource,
 ];
 
