@@ -5,8 +5,10 @@ import { SearchResult, JobListing, GroundingSource } from "../types";
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
   private lastRequestTime = 0;
-  private readonly minRequestIntervalMs = 1500;
-  
+  private readonly minRequestIntervalMs = 1500;  
+=======
+  private readonly cacheTtlMs = 60000;
+  private lastResultCache: { query: string; timestamp: number; result: SearchResult } | null = null
   constructor() {
     // Keine Initialisierung hier - API Key wird bei jedem Request geprüft
   }
@@ -91,8 +93,16 @@ export class GeminiService {
   }
 
   async searchJobs(query: string, portalPreference?: string, currentJobCount: number = 0): Promise<SearchResult> {
+    const trimmedQuery = query.trim();
+    if (currentJobCount === 0 && this.lastResultCache && this.lastResultCache.query === trimmedQuery) {
+      const cacheAge = Date.now() - this.lastResultCache.timestamp;
+      if (cacheAge < this.cacheTtlMs) {
+        return this.lastResultCache.result;
+      }
+    }
+
     const siteOperators = '(site:jobs.tt.com OR site:tirolerjobs.at OR site:karriere.at/j OR site:oehboerse.at OR site:amtsblatt.tirol.gv.at OR site:meinbezirk.at/jobs)';
-    const cleanQuery = query.replace(/[^\w\säöüÄÖÜß]/g, '').trim(); 
+    const cleanQuery = trimmedQuery.replace(/[^\w\säöüÄÖÜß]/g, '').trim(); 
     const promptQuery = `"${cleanQuery}" jobs innsbruck tirol ${siteOperators}`;
 
     const systemInstruction = `
@@ -201,11 +211,19 @@ export class GeminiService {
         })
         .filter((j: any) => j !== null);
 
-      return {
+      const result = {
         summary: rawJson.summary || "Aktuelle Jobangebote:",
         jobs: validatedJobs,
         groundingSources: sources
       };
+      if (currentJobCount === 0) {
+        this.lastResultCache = {
+          query: trimmedQuery,
+          timestamp: Date.now(),
+          result
+        };
+      }
+      return result;
     } catch (error) {
       console.error("Gemini Search Error:", error);
       throw error;
