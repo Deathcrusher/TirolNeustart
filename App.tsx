@@ -51,7 +51,7 @@ const App: React.FC = () => {
   const getFriendlyError = (err: any) => {
     const message = err?.message || '';
     if (message.includes('Jooble API Error: 404')) {
-      return 'Jooble meldet 404. Prüfe bitte deinen Jooble API-Key in den Einstellungen (jooble.org/api/about) und speichere ihn erneut.';
+      return 'Jooble meldet 404. Das liegt oft an einem ungültigen API-Key ODER daran, dass kein Proxy aktiv ist. Key prüfen (jooble.org/api/about), neu speichern und die Anfrage erneut testen.';
     }
     if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
       return 'Gemini API-Limit erreicht (429). Wichtig: Das Limit hängt am Google-Cloud-Projekt, nicht am einzelnen Key. Prüfe in AI Studio/Cloud Console das aktive Projekt (Quota, Billing, API-Key-Restriktionen) und teste ggf. ein neues Projekt mit neuem Key.';
