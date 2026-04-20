@@ -1,5 +1,9 @@
-```
+# Dependencies
+node_modules/
+
 # Build artifacts
 dist/
 build/
-```
+
+# Vercel output
+.vercel/
