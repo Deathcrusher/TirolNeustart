@@ -1,6 +1,7 @@
 import { JobListing } from '../types';
 
-const JOOBLE_BASE_URL = '/api/jooble';
+const JOOBLE_PROXY_BASE_URL = '/api/jooble';
+const JOOBLE_DIRECT_BASE_URL = 'https://jooble.org/api';
 
 export interface JoobleJob {
   id: string;
@@ -55,19 +56,33 @@ export class JoobleService {
         throw new Error('Jooble API Key fehlt. Bitte in den Einstellungen eintragen.');
       }
 
-      const response = await fetch(`${JOOBLE_BASE_URL}/${apiKey}`, {
+      const encodedApiKey = encodeURIComponent(apiKey);
+      const requestBody = JSON.stringify({
+        keywords: query,
+        location: location,
+        radius: 40,
+        page: page + 1,
+        ResultOnPage: 10,
+      });
+
+      let response = await fetch(`${JOOBLE_PROXY_BASE_URL}/${encodedApiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          keywords: query,
-          location: location,
-          radius: 40,
-          page: page + 1,
-          ResultOnPage: 10,
-        }),
+        body: requestBody,
       });
+
+      // Fallback für Deployments ohne aktiven Vite-Proxy (z. B. Produktion).
+      if (response.status === 404) {
+        response = await fetch(`${JOOBLE_DIRECT_BASE_URL}/${encodedApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: requestBody,
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Jooble API Error: ${response.status} ${response.statusText}`.trim());
@@ -93,7 +108,7 @@ export class JoobleService {
     } catch (error) {
       console.error('Jooble Search Error:', error);
       if (error instanceof TypeError && error.message.toLowerCase().includes('fetch')) {
-        throw new Error('Jooble konnte nicht erreicht werden (Fetch-Fehler). Prüfe, ob der Dev-Server läuft und der Proxy in Vite aktiv ist.');
+        throw new Error('Jooble konnte nicht erreicht werden (Fetch-Fehler). Prüfe Netzwerk, CORS-Einstellungen und ob ggf. ein Proxy benötigt wird.');
       }
       throw error instanceof Error ? error : new Error('Unbekannter Jooble Fehler');
     }
