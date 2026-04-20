@@ -52,9 +52,18 @@ export class GeminiService {
   }
 
   private async generateWithModelFallback(ai: GoogleGenAI, contents: string, systemInstruction: string) {
+    const defaultCandidates = [
+      'gemini-3.1-flash',
+      'gemini-3-flash',
+      'gemini-3-flash-preview',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+    ];
+
     const modelCandidates = this.selectedModel
-      ? [this.selectedModel]
-      : ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+      ? [this.selectedModel, ...defaultCandidates.filter(m => m !== this.selectedModel)]
+      : defaultCandidates;
 
     let lastError: unknown = null;
 
