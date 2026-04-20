@@ -1,20 +1,67 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Tirol Neustart - Jobbörse für Quereinsteiger
 
-# Run and deploy your AI Studio app
+Eine moderne React-App zur Jobsuche für Quereinsteiger in Tirol.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1v0Y8_saHsk768HEqbOJHLQXL0AyP4Mq2
+- **Jooble API Integration** (Standard) - Schnelle, kostenlose Jobsuche ohne API-Key
+- **Google Gemini KI-Suche** (Optional) - Intelligente Suche mit KI-Unterstützung
+- **Umschaltbare Suchmodi** - Wechsle zwischen Jooble und KI-Suche
+- **Lokale API-Key Speicherung** - Gemini Key wird sicher im Browser gespeichert
+- **Responsives Design** - Optimiert für Mobile und Desktop
+- **Kategorien-Filter** - Vorgefertigte Suchen für verschiedene Berufsfelder
 
-## Run Locally
+## Installation
 
-**Prerequisites:**  Node.js
+```bash
+npm install
+```
 
+## Entwicklung
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+## Nutzung
+
+### Jooble-Suche (Standard)
+- Funktioniert sofort ohne Konfiguration
+- Durchsucht Jooble.org nach Jobs in Tirol
+- Keine API-Key erforderlich
+
+### Gemini KI-Suche (Optional)
+1. Klicke auf das Zahnrad-Icon oben rechts
+2. Gib deinen Google Gemini API Key ein
+3. Wechsle den Suchmodus auf "KI-Suche"
+4. Die KI durchsucht mehrere Jobbörsen gleichzeitig
+
+API Key holen: https://aistudio.google.com/app/apikey
+
+## Umgebungsvariablen (Optional)
+
+Für die Verwendung eines festen API Keys (statt Eingabe im UI):
+
+```bash
+cp .env.example .env.local
+# Bearbeite .env.local und füge deinen Key ein
+```
+
+## Technologien
+
+- React 18
+- TypeScript
+- Tailwind CSS
+- Vite
+- Jooble API
+- Google Gemini AI (optional)
+
+## Lizenz
+
+MIT
