@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { geminiService } from './services/geminiService';
 import { joobleService } from './services/joobleService';
 import { jobSearchService } from './services/jobSearchService';
-import { JobListing, GroundingSource } from './types';
+import { JobListing, GroundingSource, SearchResult } from './types';
 import JobCard from './components/JobCard';
 
 const LOCATION_OPTIONS = [
@@ -44,6 +44,8 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadMoreNotice, setLoadMoreNotice] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
   
   // Settings state
@@ -109,13 +111,15 @@ const App: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setLoadMoreNotice(null);
     setJobs([]);
+    setCurrentPage(0);
     setHasSearched(true);
     setActiveQuery(targetQuery);
     setActiveLocation(location);
 
     try {
-      let data;
+      let data: SearchResult | null = null;
       
       // Use Jooble API if enabled, otherwise use Gemini with web scraping
       if (useJoobleOnly) {
@@ -125,6 +129,7 @@ const App: React.FC = () => {
       }
       
       setJobs(data.jobs);
+      setCurrentPage(0);
       setSummary(data.summary);
       setSources(data.groundingSources);
       if (data.jobs.length === 0) {
@@ -141,29 +146,41 @@ const App: React.FC = () => {
     if (loadingMore) return;
     setLoadingMore(true);
     setError(null);
+    setLoadMoreNotice(null);
 
     try {
-      let data;
+      let data: SearchResult | null = null;
+      let nextPage = currentPage;
+      let newUniqueJobs: JobListing[] = [];
+      const currentUrls = new Set(jobs.map(j => j.url));
       
       // Use Jooble API if enabled, otherwise use Gemini with web scraping
       if (useJoobleOnly) {
-        data = await jobSearchService.searchJobs(activeQuery, activeLocation, Math.floor(jobs.length / 10));
+        for (let attempt = 0; attempt < 3; attempt++) {
+          nextPage += 1;
+          data = await jobSearchService.searchJobs(activeQuery, activeLocation, nextPage);
+          newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
+
+          if (newUniqueJobs.length > 0 || data.jobs.length === 0) {
+            break;
+          }
+        }
+
+        setCurrentPage(nextPage);
       } else {
         data = await geminiService.searchJobs(activeQuery, undefined, jobs.length, activeLocation, {
           knownUrls: jobs.map(job => job.url)
         });
+        newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
       }
-      
-      const currentUrls = new Set(jobs.map(j => j.url));
-      const newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
 
       if (newUniqueJobs.length === 0) {
-        // Silent
+        setLoadMoreNotice('Gerade keine weiteren neuen Treffer gefunden. Versuch es später nochmal oder ändere den Suchbegriff.');
       } else {
         setJobs(prev => [...prev, ...newUniqueJobs]);
         setSources(prev => {
           const existingUris = new Set(prev.map(s => s.uri));
-          const newSources = data.groundingSources.filter(s => !existingUris.has(s.uri));
+          const newSources = (data?.groundingSources || []).filter(s => !existingUris.has(s.uri));
           return [...prev, ...newSources];
         });
       }
@@ -438,7 +455,7 @@ const App: React.FC = () => {
               ))}
             </div>
 
-            <div className="flex justify-center py-10">
+            <div className="flex flex-col items-center justify-center py-10">
                <button 
                 onClick={handleLoadMore}
                 disabled={loadingMore}
@@ -453,6 +470,11 @@ const App: React.FC = () => {
                  )}
                  <span>Weitere Chancen anzeigen</span>
                </button>
+               {loadMoreNotice && (
+                <p className="mt-4 max-w-md text-center text-sm font-semibold text-slate-500">
+                  {loadMoreNotice}
+                </p>
+               )}
             </div>
           </div>
         )}
