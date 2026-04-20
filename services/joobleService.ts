@@ -58,22 +58,45 @@ export class JoobleService {
       }
 
       const encodedApiKey = encodeURIComponent(apiKey);
+      const searchQueries = this.getSearchQueries(query);
       const searchLocations = this.getSearchLocations(location);
-      let data: any = null;
+      const jobsByUrl = new Map<string, any>();
+      const debugResults: string[] = [];
 
-      for (const searchLocation of searchLocations) {
-        data = await this.fetchJooble(encodedApiKey, query, searchLocation, page);
+      for (const searchQuery of searchQueries) {
+        for (const searchLocation of searchLocations) {
+          const data = await this.fetchJooble(encodedApiKey, searchQuery, searchLocation, page);
+          const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+          debugResults.push(`${searchQuery} / ${searchLocation}: ${jobs.length} von ${data.totalCount ?? '?'}`);
 
-        if (Array.isArray(data.jobs) && data.jobs.length > 0) {
+          jobs.forEach((job: any) => {
+            const key = job.link || job.url || job.id || `${job.title}-${job.company}-${job.location}`;
+            if (key && !jobsByUrl.has(key)) {
+              jobsByUrl.set(key, job);
+            }
+          });
+
+          if (jobsByUrl.size >= RESULTS_PER_PAGE) {
+            break;
+          }
+        }
+
+        if (jobsByUrl.size >= RESULTS_PER_PAGE) {
           break;
         }
       }
+
+      if (jobsByUrl.size === 0) {
+        console.info('Jooble returned no jobs for all search variants:', debugResults);
+      }
       
-      if (!data.jobs || !Array.isArray(data.jobs)) {
+      const jobs = [...jobsByUrl.values()].slice(0, RESULTS_PER_PAGE);
+
+      if (jobs.length === 0) {
         return [];
       }
 
-      return data.jobs.map((job: any, index: number) => ({
+      return jobs.map((job: any, index: number) => ({
         id: job.id || `jooble-${Date.now()}-${index}`,
         title: job.title || 'Unbekannte Position',
         company: job.company || 'Vertraulich',
@@ -133,12 +156,40 @@ export class JoobleService {
     const normalized = location.trim();
     const locations = [
       normalized,
-      'Tirol, Österreich',
+      'Tyrol',
+      'Tyrol, Austria',
       'Innsbruck, Tirol',
       'Innsbruck',
+      'Kufstein',
+      'Wörgl',
+      'Schwaz',
+      'Hall in Tirol',
+      'Kitzbühel',
+      'Imst',
+      'Landeck',
+      'Lienz',
+      'Reutte',
+      'Telfs',
     ].filter(Boolean);
 
     return [...new Set(locations)];
+  }
+
+  private getSearchQueries(query: string): string[] {
+    const normalized = query.trim();
+    const simplified = normalized
+      .replace(/\b(jobs?|stellenangebote?|stelle|tirol|tyrol|innsbruck|österreich|austria)\b/gi, ' ')
+      .replace(/\b(ohne|mit|und|oder|für|fuer|als|in|im|am|der|die|das|eine?|keine?)\b/gi, ' ')
+      .replace(/\b(erfahrung|vorkenntnisse|ausbildung|quereinstieg|möglich|moeglich)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const queries = [
+      normalized,
+      simplified,
+    ].filter(Boolean);
+
+    return [...new Set(queries)];
   }
 
   private formatDate(dateStr: string): string {
