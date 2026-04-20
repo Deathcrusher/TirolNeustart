@@ -4,7 +4,7 @@ Eine moderne React-App zur Jobsuche für Quereinsteiger in Tirol.
 
 ## Features
 
-- **Jooble API Integration** (Standard) - Schnelle, kostenlose Jobsuche ohne API-Key
+- **Jooble API Integration** (Standard) - Direkte Jobsuche über die offizielle Jooble REST API
 - **Google Gemini KI-Suche** (Optional) - Intelligente Suche mit KI-Unterstützung
 - **Umschaltbare Suchmodi** - Wechsle zwischen Jooble und KI-Suche
 - **Lokale API-Key Speicherung** - Gemini Key wird sicher im Browser gespeichert
@@ -32,17 +32,17 @@ npm run build
 ## Nutzung
 
 ### Jooble-Suche (Standard)
-- Funktioniert sofort ohne Konfiguration
+- Benötigt einen eigenen Jooble API-Key (in den Einstellungen eintragen)
 - Durchsucht Jooble.org nach Jobs in Tirol
-- Keine API-Key erforderlich
 - Verwendet im Dev-Modus einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
+- Verwendet den offiziellen Endpoint `POST /api/{api_key}` mit `keywords`/`location`
 
 ### Gemini KI-Suche (Optional)
 1. Klicke auf das Zahnrad-Icon oben rechts
 2. Gib deinen Google Gemini API Key ein
 3. Wechsle den Suchmodus auf "KI-Suche"
 4. Die KI durchsucht mehrere Jobbörsen gleichzeitig
-5. Das System versucht automatisch aktuelle Flash-Modelle (beginnend mit `gemini-3.1-flash`) und fällt bei Bedarf auf kompatible Modelle zurück
+5. Das System versucht automatisch aktuelle Flash-Modelle (beginnend mit `gemini-3.1-flash-lite-preview`) und fällt bei Bedarf auf kompatible Modelle zurück
 
 API Key holen: https://aistudio.google.com/app/apikey
 

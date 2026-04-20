@@ -1,6 +1,5 @@
 import { JobListing } from '../types';
 
-const JOOBLE_API_KEY = 'd67a58e0-4c09-4f0e-8f0a-3b6e8c5d9e2f'; // Öffentlicher Test-Key
 const JOOBLE_BASE_URL = '/api/jooble';
 
 export interface JoobleJob {
@@ -15,20 +14,58 @@ export interface JoobleJob {
 }
 
 export class JoobleService {
+  private apiKeyOverride: string | null = null;
+
+  setApiKey(apiKey: string) {
+    const normalized = apiKey.trim();
+    this.apiKeyOverride = normalized || null;
+  }
+
+  private resolveApiKey(): string {
+    if (this.apiKeyOverride) return this.apiKeyOverride;
+
+    try {
+      const fromStorage = localStorage.getItem('jooble_api_key') || '';
+      if (fromStorage.trim()) return fromStorage.trim();
+    } catch (e) {}
+
+    try {
+      // @ts-ignore
+      if (typeof import.meta !== 'undefined' && import.meta.env) {
+        // @ts-ignore
+        const fromEnv = import.meta.env.VITE_JOOBLE_API_KEY || import.meta.env.JOOBLE_API_KEY || '';
+        if (fromEnv.trim()) return fromEnv.trim();
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        const fromProcess = process.env.JOOBLE_API_KEY || process.env.VITE_JOOBLE_API_KEY || '';
+        if (fromProcess.trim()) return fromProcess.trim();
+      }
+    } catch (e) {}
+
+    return '';
+  }
+
   async searchJobs(query: string, location: string = 'Tirol', page: number = 0): Promise<JobListing[]> {
     try {
-      const offset = page * 10;
-      const response = await fetch(`${JOOBLE_BASE_URL}/${JOOBLE_API_KEY}`, {
+      const apiKey = this.resolveApiKey();
+      if (!apiKey) {
+        throw new Error('Jooble API Key fehlt. Bitte in den Einstellungen eintragen.');
+      }
+
+      const response = await fetch(`${JOOBLE_BASE_URL}/${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: query,
+          keywords: query,
           location: location,
-          radius: 50,
-          offset: offset,
-          limit: 10,
+          radius: 40,
+          page: page + 1,
+          ResultOnPage: 10,
         }),
       });
 
