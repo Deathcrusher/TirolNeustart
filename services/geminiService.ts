@@ -3,9 +3,13 @@ import { GoogleGenAI } from "@google/genai";
 import { SearchResult, JobListing, GroundingSource } from "../types";
 
 const SEARCH_GROUNDED_MODEL_CANDIDATES = [
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3.1-flash-preview',
+  'gemini-3-flash-preview',
+  'gemma-4-31b-it',
+  'gemma-4-26b-a4b-it',
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
-  'gemini-2.0-flash',
   'gemini-2.5-pro',
 ];
 
@@ -35,7 +39,7 @@ export class GeminiService {
 
   setModel(model: string) {
     const normalized = model.trim();
-    this.selectedModel = SEARCH_GROUNDED_MODEL_CANDIDATES.includes(normalized) ? normalized : null;
+    this.selectedModel = normalized || null;
     this.lastResultCache = null;
   }
 

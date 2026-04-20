@@ -22,9 +22,13 @@ const LOCATION_OPTIONS = [
 
 const GEMINI_MODEL_OPTIONS = [
   { value: '', label: 'Automatisch' },
+  { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite' },
+  { value: 'gemini-3.1-flash-preview', label: 'Gemini 3.1 Flash' },
+  { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  { value: 'gemma-4-31b-it', label: 'Gemma 4 31B' },
+  { value: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (schnell)' },
   { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (gründlicher)' },
 ];
 
@@ -53,8 +57,7 @@ const App: React.FC = () => {
     try {
       const savedApiKey = localStorage.getItem('gemini_api_key') || '';
       const savedJoobleApiKey = localStorage.getItem('jooble_api_key') || '';
-      const rawSavedGeminiModel = localStorage.getItem('gemini_model') || '';
-      const savedGeminiModel = GEMINI_MODEL_OPTIONS.some(model => model.value === rawSavedGeminiModel) ? rawSavedGeminiModel : '';
+      const savedGeminiModel = localStorage.getItem('gemini_model') || '';
       const savedLocation = localStorage.getItem('job_location') || 'Tirol';
       const rawUseJooble = localStorage.getItem('use_jooble_only');
       const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
@@ -267,7 +270,7 @@ const App: React.FC = () => {
                   ))}
                 </select>
                 <p className="text-xs text-slate-500 mt-2">
-                  Für die Websuche sind nur Gemini-Modelle mit Google Search Grounding auswählbar.
+                  Neuere Modelle stehen oben. Falls ein Modell für deinen Key nicht freigeschaltet ist, wird automatisch das nächste probiert.
                 </p>
               </div>
 
