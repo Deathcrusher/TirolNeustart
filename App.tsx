@@ -19,16 +19,20 @@ const App: React.FC = () => {
   // Settings state
   const [showSettings, setShowSettings] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [joobleApiKey, setJoobleApiKey] = useState('');
   const [useJoobleOnly, setUseJoobleOnly] = useState(true);
 
   // Load settings from localStorage on mount
   useEffect(() => {
     try {
       const savedApiKey = localStorage.getItem('gemini_api_key') || '';
+      const savedJoobleApiKey = localStorage.getItem('jooble_api_key') || '';
       const rawUseJooble = localStorage.getItem('use_jooble_only');
       const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
       setGeminiApiKey(savedApiKey);
+      setJoobleApiKey(savedJoobleApiKey);
       geminiService.setApiKey(savedApiKey);
+      joobleService.setApiKey(savedJoobleApiKey);
       setUseJoobleOnly(savedUseJooble);
     } catch (e) {}
   }, []);
@@ -36,14 +40,19 @@ const App: React.FC = () => {
   const saveSettings = () => {
     try {
       localStorage.setItem('gemini_api_key', geminiApiKey);
+      localStorage.setItem('jooble_api_key', joobleApiKey);
       localStorage.setItem('use_jooble_only', String(useJoobleOnly));
       geminiService.setApiKey(geminiApiKey);
+      joobleService.setApiKey(joobleApiKey);
       setShowSettings(false);
     } catch (e) {}
   };
 
   const getFriendlyError = (err: any) => {
     const message = err?.message || '';
+    if (message.includes('Jooble API Error: 404')) {
+      return 'Jooble meldet 404. Prüfe bitte deinen Jooble API-Key in den Einstellungen (jooble.org/api/about) und speichere ihn erneut.';
+    }
     if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
       return 'Gemini API-Limit erreicht (429). Wichtig: Das Limit hängt am Google-Cloud-Projekt, nicht am einzelnen Key. Prüfe in AI Studio/Cloud Console das aktive Projekt (Quota, Billing, API-Key-Restriktionen) und teste ggf. ein neues Projekt mit neuem Key.';
     }
@@ -200,6 +209,27 @@ const App: React.FC = () => {
                   Hol dir deinen kostenlosen API Key bei{' '}
                   <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
                     Google AI Studio
+                  </a>
+                </p>
+              </div>
+
+              {/* Jooble API Key Setting */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  <i className="fas fa-key text-blue-500 mr-2"></i>
+                  Jooble API Key
+                </label>
+                <input
+                  type="password"
+                  value={joobleApiKey}
+                  onChange={(e) => setJoobleApiKey(e.target.value)}
+                  placeholder="Gib deinen Jooble Key ein..."
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all font-medium"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  Jooble API-Key holen bei{' '}
+                  <a href="https://jooble.org/api/about" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    jooble.org/api/about
                   </a>
                 </p>
               </div>
