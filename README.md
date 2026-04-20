@@ -35,12 +35,14 @@ npm run build
 - Funktioniert sofort ohne Konfiguration
 - Durchsucht Jooble.org nach Jobs in Tirol
 - Keine API-Key erforderlich
+- Verwendet im Dev-Modus einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
 
 ### Gemini KI-Suche (Optional)
 1. Klicke auf das Zahnrad-Icon oben rechts
 2. Gib deinen Google Gemini API Key ein
 3. Wechsle den Suchmodus auf "KI-Suche"
 4. Die KI durchsucht mehrere Jobbörsen gleichzeitig
+5. Das System versucht automatisch aktuelle Flash-Modelle (beginnend mit `gemini-3.1-flash`) und fällt bei Bedarf auf kompatible Modelle zurück
 
 API Key holen: https://aistudio.google.com/app/apikey
 
