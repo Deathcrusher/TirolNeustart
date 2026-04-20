@@ -200,6 +200,8 @@ The first implementation step now exists:
 
 - `/api/search-jobs.js` aggregates provider results.
 - `server/jobSources/karriereAt.js` is the first custom fetch-based scraper.
+- `server/jobSources/metajob.js` adds METAJob through its preloaded search state.
+- `server/jobSources/indeedAt.js` is registered defensively, but Indeed currently blocks automated server fetches from this environment.
 - `server/jobSources/index.js` is the source registry.
 - `server/jobs/dedupe.js` removes duplicate jobs before returning results.
 - `services/jobSearchService.ts` lets the frontend call the backend aggregator and fall back to Jooble in local/dev environments.

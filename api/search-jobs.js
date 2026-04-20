@@ -3,6 +3,12 @@ import { dedupeJobs } from '../server/jobs/dedupe.js';
 
 const JOOBLE_BASE_URL = 'https://jooble.org/api';
 const RESULTS_PER_PAGE = 20;
+const SOURCE_URIS = {
+  'karriere.at': 'https://www.karriere.at/jobs/tirol',
+  'METAJob': 'https://www.metajob.at',
+  'Indeed AT': 'https://at.indeed.com',
+  'Jooble': 'https://jooble.org',
+};
 
 async function fetchJooble({ apiKey, query, location, page }) {
   if (!apiKey) return [];
@@ -96,7 +102,7 @@ export default async function handler(request, response) {
     summary: `${jobs.length} Treffer aus ${sourceNames.join(', ') || 'eigenen Quellen'} für "${cleanedQuery}" in ${cleanedLocation}.`,
     groundingSources: sourceNames.map((source) => ({
       title: source,
-      uri: source === 'karriere.at' ? 'https://www.karriere.at/jobs/tirol' : 'https://jooble.org',
+      uri: SOURCE_URIS[source] || 'https://jooble.org',
     })),
     debug: {
       errors,

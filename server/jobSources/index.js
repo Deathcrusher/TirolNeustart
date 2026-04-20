@@ -1,7 +1,11 @@
+import { indeedAtSource } from './indeedAt.js';
 import { karriereAtSource } from './karriereAt.js';
+import { metajobSource } from './metajob.js';
 
 const SOURCES = [
   karriereAtSource,
+  metajobSource,
+  indeedAtSource,
 ];
 
 export async function searchCustomSources(input) {
