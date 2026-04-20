@@ -2,6 +2,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { SearchResult, JobListing, GroundingSource } from "../types";
 
+const SEARCH_GROUNDED_MODEL_CANDIDATES = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.5-pro',
+];
+
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
   private selectedModel: string | null = null;
@@ -28,7 +35,7 @@ export class GeminiService {
 
   setModel(model: string) {
     const normalized = model.trim();
-    this.selectedModel = normalized || null;
+    this.selectedModel = SEARCH_GROUNDED_MODEL_CANDIDATES.includes(normalized) ? normalized : null;
     this.lastResultCache = null;
   }
 
@@ -93,11 +100,9 @@ export class GeminiService {
   }
 
   private async generateWithModelFallback(ai: GoogleGenAI, contents: string, systemInstruction: string) {
-    const defaultCandidates = ['gemini-3.1-flash-lite-preview', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-
     const modelCandidates = this.selectedModel
-      ? [this.selectedModel, ...defaultCandidates.filter(m => m !== this.selectedModel)]
-      : defaultCandidates;
+      ? [this.selectedModel, ...SEARCH_GROUNDED_MODEL_CANDIDATES.filter(m => m !== this.selectedModel)]
+      : SEARCH_GROUNDED_MODEL_CANDIDATES;
 
     let lastError: unknown = null;
 
