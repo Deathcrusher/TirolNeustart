@@ -20,13 +20,14 @@ const App: React.FC = () => {
   // Settings state
   const [showSettings, setShowSettings] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [useJoobleOnly, setUseJoobleOnly] = useState(false);
+  const [useJoobleOnly, setUseJoobleOnly] = useState(true);
 
   // Load settings from localStorage on mount
   useEffect(() => {
     try {
       const savedApiKey = localStorage.getItem('gemini_api_key') || '';
-      const savedUseJooble = localStorage.getItem('use_jooble_only') === 'true';
+      const rawUseJooble = localStorage.getItem('use_jooble_only');
+      const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
       setGeminiApiKey(savedApiKey);
       setUseJoobleOnly(savedUseJooble);
     } catch (e) {}

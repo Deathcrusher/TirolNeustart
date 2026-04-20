@@ -1,7 +1,7 @@
 import { JobListing } from '../types';
 
 const JOOBLE_API_KEY = 'd67a58e0-4c09-4f0e-8f0a-3b6e8c5d9e2f'; // Öffentlicher Test-Key
-const JOOBLE_BASE_URL = 'https://jooble.org/api';
+const JOOBLE_BASE_URL = '/api/jooble';
 
 export interface JoobleJob {
   id: string;
@@ -33,7 +33,7 @@ export class JoobleService {
       });
 
       if (!response.ok) {
-        throw new Error(`Jooble API Error: ${response.status}`);
+        throw new Error(`Jooble API Error: ${response.status} ${response.statusText}`.trim());
       }
 
       const data = await response.json();
@@ -55,7 +55,10 @@ export class JoobleService {
       }));
     } catch (error) {
       console.error('Jooble Search Error:', error);
-      throw error;
+      if (error instanceof TypeError && error.message.toLowerCase().includes('fetch')) {
+        throw new Error('Jooble konnte nicht erreicht werden (Fetch-Fehler). Prüfe, ob der Dev-Server läuft und der Proxy in Vite aktiv ist.');
+      }
+      throw error instanceof Error ? error : new Error('Unbekannter Jooble Fehler');
     }
   }
 

@@ -35,6 +35,7 @@ npm run build
 - Funktioniert sofort ohne Konfiguration
 - Durchsucht Jooble.org nach Jobs in Tirol
 - Keine API-Key erforderlich
+- Verwendet im Dev-Modus einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
 
 ### Gemini KI-Suche (Optional)
 1. Klicke auf das Zahnrad-Icon oben rechts

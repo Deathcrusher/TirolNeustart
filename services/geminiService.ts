@@ -4,6 +4,7 @@ import { SearchResult, JobListing, GroundingSource } from "../types";
 
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
+  private selectedModel: string | null = null;
   private lastRequestTime = 0;
   private readonly minRequestIntervalMs = 1500;
   private readonly cacheTtlMs = 60000;
@@ -48,6 +49,43 @@ export class GeminiService {
 
     this.ai = new GoogleGenAI({ apiKey: apiKey });
     return this.ai;
+  }
+
+  private async generateWithModelFallback(ai: GoogleGenAI, contents: string, systemInstruction: string) {
+    const modelCandidates = this.selectedModel
+      ? [this.selectedModel]
+      : ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+
+    let lastError: unknown = null;
+
+    for (const model of modelCandidates) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            tools: [{ googleSearch: {} }],
+          },
+        });
+        this.selectedModel = model;
+        return response;
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        const isMissingModel =
+          message.includes('not found') ||
+          message.includes('unsupported') ||
+          message.includes('INVALID_ARGUMENT');
+
+        if (!isMissingModel) {
+          throw error;
+        }
+
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('Kein kompatibles Gemini-Modell verfügbar.');
   }
 
   private extractJson(text: string): any {
@@ -127,14 +165,11 @@ export class GeminiService {
         throw new Error("API Key fehlt. Bitte gib deinen Gemini API Key in den Einstellungen ein.");
       }
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp', 
-        contents: `Suche die 10 besten Job-Links für: ${promptQuery}.`,
-        config: {
-          systemInstruction: systemInstruction,
-          tools: [{ googleSearch: {} }],
-        },
-      });
+      const response = await this.generateWithModelFallback(
+        ai,
+        `Suche die 10 besten Job-Links für: ${promptQuery}.`,
+        systemInstruction
+      );
 
       const responseText = response.text || '';
       const rawJson = this.extractJson(responseText);
