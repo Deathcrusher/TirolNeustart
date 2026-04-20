@@ -61,7 +61,9 @@ export class JoobleService {
         keywords: query,
         location: location,
         radius: 40,
-        page: page + 1,
+        // Jooble API erwartet 0-basierte Seitennummern.
+        // page=0 muss die erste Ergebnisseite laden.
+        page: page,
         ResultOnPage: 10,
       });
 
