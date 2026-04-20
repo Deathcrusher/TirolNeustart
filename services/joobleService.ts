@@ -154,23 +154,30 @@ export class JoobleService {
 
   private getSearchLocations(location: string): string[] {
     const normalized = location.trim();
-    const locations = [
-      normalized,
-      'Tyrol',
-      'Tyrol, Austria',
-      'Innsbruck, Tirol',
-      'Innsbruck',
-      'Kufstein',
-      'Wörgl',
-      'Schwaz',
-      'Hall in Tirol',
-      'Kitzbühel',
-      'Imst',
-      'Landeck',
-      'Lienz',
-      'Reutte',
-      'Telfs',
-    ].filter(Boolean);
+    const isWholeTirol = !normalized || /^(tirol|tyrol|tirol gesamt)$/i.test(normalized);
+    const locations = isWholeTirol
+      ? [
+          'Tirol',
+          'Tyrol',
+          'Tyrol, Austria',
+          'Innsbruck, Tirol',
+          'Innsbruck',
+          'Kufstein',
+          'Wörgl',
+          'Schwaz',
+          'Hall in Tirol',
+          'Kitzbühel',
+          'Imst',
+          'Landeck',
+          'Lienz',
+          'Reutte',
+          'Telfs',
+        ]
+      : [
+          normalized,
+          `${normalized}, Tirol`,
+          `${normalized}, Austria`,
+        ];
 
     return [...new Set(locations)];
   }

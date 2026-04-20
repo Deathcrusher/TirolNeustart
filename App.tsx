@@ -5,9 +5,35 @@ import { joobleService } from './services/joobleService';
 import { JobListing, GroundingSource } from './types';
 import JobCard from './components/JobCard';
 
+const LOCATION_OPTIONS = [
+  'Tirol',
+  'Innsbruck',
+  'Kufstein',
+  'Wörgl',
+  'Schwaz',
+  'Hall in Tirol',
+  'Kitzbühel',
+  'Imst',
+  'Landeck',
+  'Lienz',
+  'Reutte',
+  'Telfs',
+];
+
+const GEMINI_MODEL_OPTIONS = [
+  { value: '', label: 'Automatisch' },
+  { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  { value: 'gemma-4-31b-it', label: 'Gemma 4 31B' },
+  { value: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B' },
+];
+
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('Quereinsteiger Jobs Tirol');
+  const [location, setLocation] = useState('Tirol');
+  const [activeLocation, setActiveLocation] = useState('Tirol');
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [summary, setSummary] = useState('');
   const [sources, setSources] = useState<GroundingSource[]>([]);
@@ -20,6 +46,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [joobleApiKey, setJoobleApiKey] = useState('');
+  const [geminiModel, setGeminiModel] = useState('');
   const [useJoobleOnly, setUseJoobleOnly] = useState(true);
 
   // Load settings from localStorage on mount
@@ -27,11 +54,17 @@ const App: React.FC = () => {
     try {
       const savedApiKey = localStorage.getItem('gemini_api_key') || '';
       const savedJoobleApiKey = localStorage.getItem('jooble_api_key') || '';
+      const savedGeminiModel = localStorage.getItem('gemini_model') || '';
+      const savedLocation = localStorage.getItem('job_location') || 'Tirol';
       const rawUseJooble = localStorage.getItem('use_jooble_only');
       const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
       setGeminiApiKey(savedApiKey);
       setJoobleApiKey(savedJoobleApiKey);
+      setGeminiModel(savedGeminiModel);
+      setLocation(savedLocation);
+      setActiveLocation(savedLocation);
       geminiService.setApiKey(savedApiKey);
+      geminiService.setModel(savedGeminiModel);
       joobleService.setApiKey(savedJoobleApiKey);
       setUseJoobleOnly(savedUseJooble);
     } catch (e) {}
@@ -41,8 +74,11 @@ const App: React.FC = () => {
     try {
       localStorage.setItem('gemini_api_key', geminiApiKey);
       localStorage.setItem('jooble_api_key', joobleApiKey);
+      localStorage.setItem('gemini_model', geminiModel);
+      localStorage.setItem('job_location', location);
       localStorage.setItem('use_jooble_only', String(useJoobleOnly));
       geminiService.setApiKey(geminiApiKey);
+      geminiService.setModel(geminiModel);
       joobleService.setApiKey(joobleApiKey);
       setShowSettings(false);
     } catch (e) {}
@@ -72,20 +108,21 @@ const App: React.FC = () => {
     setJobs([]);
     setHasSearched(true);
     setActiveQuery(targetQuery);
+    setActiveLocation(location);
 
     try {
       let data;
       
       // Use Jooble API if enabled, otherwise use Gemini with web scraping
       if (useJoobleOnly) {
-        const joobleJobs = await joobleService.searchJobs(targetQuery, 'Tirol', 0);
+        const joobleJobs = await joobleService.searchJobs(targetQuery, location, 0);
         data = {
           jobs: joobleJobs,
-          summary: `Jooble Ergebnisse für "${targetQuery}":`,
+          summary: `Jooble Ergebnisse für "${targetQuery}" in ${location}:`,
           groundingSources: []
         };
       } else {
-        data = await geminiService.searchJobs(targetQuery, undefined, 0);
+        data = await geminiService.searchJobs(targetQuery, undefined, 0, location);
       }
       
       setJobs(data.jobs);
@@ -111,13 +148,13 @@ const App: React.FC = () => {
       
       // Use Jooble API if enabled, otherwise use Gemini with web scraping
       if (useJoobleOnly) {
-        const joobleJobs = await joobleService.searchJobs(activeQuery, 'Tirol', Math.floor(jobs.length / 10));
+        const joobleJobs = await joobleService.searchJobs(activeQuery, activeLocation, Math.floor(jobs.length / 10));
         data = {
           jobs: joobleJobs,
           groundingSources: []
         };
       } else {
-        data = await geminiService.searchJobs(activeQuery, undefined, jobs.length);
+        data = await geminiService.searchJobs(activeQuery, undefined, jobs.length, activeLocation);
       }
       
       const currentUrls = new Set(jobs.map(j => j.url));
@@ -177,7 +214,7 @@ const App: React.FC = () => {
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 animate-fade-in-up">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <i className="fas fa-cog text-emerald-500"></i>
@@ -210,6 +247,27 @@ const App: React.FC = () => {
                   <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
                     Google AI Studio
                   </a>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  <i className="fas fa-microchip text-emerald-500 mr-2"></i>
+                  Gemini Modell
+                </label>
+                <select
+                  value={geminiModel}
+                  onChange={(e) => setGeminiModel(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition-all font-medium"
+                >
+                  {GEMINI_MODEL_OPTIONS.map((model) => (
+                    <option key={model.value || 'auto'} value={model.value}>
+                      {model.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-2">
+                  Automatisch probiert kompatible Modelle. Gemma 4 ist experimentell, weil nicht jeder Key jedes Modell freigeschaltet hat.
                 </p>
               </div>
 
@@ -295,6 +353,29 @@ const App: React.FC = () => {
                   Suchen
                </button>
             </form>
+
+            <div className="max-w-2xl mx-auto mb-8 flex flex-col sm:flex-row sm:items-center justify-center gap-3">
+              <label className="text-sm font-bold text-slate-600 flex items-center justify-center gap-2">
+                <i className="fas fa-location-dot text-emerald-500"></i>
+                Ort
+              </label>
+              <select
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  try {
+                    localStorage.setItem('job_location', e.target.value);
+                  } catch (err) {}
+                }}
+                className="px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-900 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all font-semibold"
+              >
+                {LOCATION_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option === 'Tirol' ? 'Tirol gesamt' : option}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="flex flex-wrap justify-center gap-3">
                {categories.map((cat, idx) => (

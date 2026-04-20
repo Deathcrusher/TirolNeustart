@@ -24,7 +24,12 @@ export class GeminiService {
     // Client zurücksetzen, damit bei Key-Wechsel garantiert der neue Key verwendet wird.
     this.ai = null;
     this.activeApiKey = '';
-    this.selectedModel = null;
+  }
+
+  setModel(model: string) {
+    const normalized = model.trim();
+    this.selectedModel = normalized || null;
+    this.lastResultCache = null;
   }
 
   private resolveApiKey(): { key: string; source: 'manual' | 'localStorage' | 'env' | 'none' } {
@@ -210,9 +215,10 @@ export class GeminiService {
     return true;
   }
 
-  async searchJobs(query: string, portalPreference?: string, currentJobCount: number = 0): Promise<SearchResult> {
+  async searchJobs(query: string, portalPreference?: string, currentJobCount: number = 0, location: string = 'Tirol'): Promise<SearchResult> {
     const trimmedQuery = query.trim();
-    if (currentJobCount === 0 && this.lastResultCache && this.lastResultCache.query === trimmedQuery) {
+    const cacheKey = `${this.selectedModel || 'auto'}|${location}|${trimmedQuery}`;
+    if (currentJobCount === 0 && this.lastResultCache && this.lastResultCache.query === cacheKey) {
       const cacheAge = Date.now() - this.lastResultCache.timestamp;
       if (cacheAge < this.cacheTtlMs) {
         return this.lastResultCache.result;
@@ -221,7 +227,8 @@ export class GeminiService {
 
     const siteOperators = '(site:jobs.tt.com OR site:tirolerjobs.at OR site:karriere.at/j OR site:oehboerse.at OR site:amtsblatt.tirol.gv.at OR site:meinbezirk.at/jobs)';
     const cleanQuery = trimmedQuery.replace(/[^\w\säöüÄÖÜß]/g, '').trim(); 
-    const promptQuery = `"${cleanQuery}" jobs innsbruck tirol ${siteOperators}`;
+    const cleanLocation = location.replace(/[^\w\säöüÄÖÜß]/g, '').trim();
+    const promptQuery = `"${cleanQuery}" jobs ${cleanLocation} tirol ${siteOperators}`;
 
     const systemInstruction = `
       Du bist ein Job-Such-Assistent.
@@ -333,7 +340,7 @@ export class GeminiService {
       };
       if (currentJobCount === 0) {
         this.lastResultCache = {
-          query: trimmedQuery,
+          query: cacheKey,
           timestamp: Date.now(),
           result
         };
