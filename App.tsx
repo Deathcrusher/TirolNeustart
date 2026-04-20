@@ -184,12 +184,12 @@ const App: React.FC = () => {
   };
 
   const categories = [
-    { label: "Quereinsteiger", icon: "fa-random", search: "Quereinsteiger Jobs Innsbruck ohne Erfahrung" },
-    { label: "Ohne Vorkenntnisse", icon: "fa-user-graduate", search: "Hilfskraft Jobs Tirol ohne Ausbildung" },
-    { label: "Beauty & Wellness", icon: "fa-spa", search: "Beauty Kosmetik Jobs Tirol Quereinstieg Ausbildung möglich" },
-    { label: "Remote / Homeoffice", icon: "fa-laptop-house", search: "Homeoffice Jobs Tirol Quereinsteiger Support" },
-    { label: "Büroassistenz", icon: "fa-print", search: "Bürohilfe Jobs Innsbruck ungelernt" },
-    { label: "Verkauf & Mode", icon: "fa-tshirt", search: "Verkauf Jobs Mode Tirol Aushilfe" },
+    { label: "Quereinsteiger", icon: "fa-random", search: "Quereinsteiger" },
+    { label: "Ohne Vorkenntnisse", icon: "fa-user-graduate", search: "Ohne Vorkenntnisse" },
+    { label: "Beauty & Wellness", icon: "fa-spa", search: "Beauty Wellness" },
+    { label: "Remote / Homeoffice", icon: "fa-laptop-house", search: "Homeoffice Remote" },
+    { label: "Büroassistenz", icon: "fa-print", search: "Büroassistenz" },
+    { label: "Verkauf & Mode", icon: "fa-tshirt", search: "Verkauf Mode" },
   ];
 
   return (

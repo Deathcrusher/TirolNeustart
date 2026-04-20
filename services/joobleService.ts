@@ -60,12 +60,22 @@ export class JoobleService {
       const encodedApiKey = encodeURIComponent(apiKey);
       const searchQueries = this.getSearchQueries(query);
       const searchLocations = this.getSearchLocations(location);
+      const requestPairs = this.getRequestPairs(searchQueries, searchLocations, page);
       const jobsByUrl = new Map<string, any>();
       const debugResults: string[] = [];
 
-      for (const searchQuery of searchQueries) {
-        for (const searchLocation of searchLocations) {
-          const data = await this.fetchJooble(encodedApiKey, searchQuery, searchLocation, page);
+      const responses = await Promise.allSettled(
+        requestPairs.map(({ query: searchQuery, location: searchLocation }) =>
+          this.fetchJooble(encodedApiKey, searchQuery, searchLocation, page)
+            .then(data => ({ data, searchQuery, searchLocation }))
+        )
+      );
+
+      const rejectedResponses = responses.filter((response): response is PromiseRejectedResult => response.status === 'rejected');
+
+      responses.forEach((response) => {
+        if (response.status === 'fulfilled') {
+          const { data, searchQuery, searchLocation } = response.value;
           const jobs = Array.isArray(data.jobs) ? data.jobs : [];
           debugResults.push(`${searchQuery} / ${searchLocation}: ${jobs.length} von ${data.totalCount ?? '?'}`);
 
@@ -75,15 +85,11 @@ export class JoobleService {
               jobsByUrl.set(key, job);
             }
           });
-
-          if (jobsByUrl.size >= RESULTS_PER_PAGE) {
-            break;
-          }
         }
+      });
 
-        if (jobsByUrl.size >= RESULTS_PER_PAGE) {
-          break;
-        }
+      if (jobsByUrl.size === 0 && rejectedResponses.length === responses.length && rejectedResponses[0]) {
+        throw rejectedResponses[0].reason;
       }
 
       if (jobsByUrl.size === 0) {
@@ -180,6 +186,20 @@ export class JoobleService {
         ];
 
     return [...new Set(locations)];
+  }
+
+  private getRequestPairs(searchQueries: string[], searchLocations: string[], page: number): Array<{ query: string; location: string }> {
+    const maxRequests = page === 0 ? 6 : 10;
+    const pairs: Array<{ query: string; location: string }> = [];
+
+    for (const searchQuery of searchQueries) {
+      for (const searchLocation of searchLocations) {
+        pairs.push({ query: searchQuery, location: searchLocation });
+        if (pairs.length >= maxRequests) return pairs;
+      }
+    }
+
+    return pairs;
   }
 
   private getSearchQueries(query: string): string[] {

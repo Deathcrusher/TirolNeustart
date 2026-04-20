@@ -282,14 +282,13 @@ export class GeminiService {
       : [cleanedLocation, `${cleanedLocation} Tirol`];
 
     const variants = [
-      `"${query}" "${cleanedLocation}" stellenanzeige bewerben`,
-      `${compactQuery} quereinsteiger hilfskraft ${locationTerms[0]} job`,
-      `${compactQuery} ohne ausbildung ${locationTerms[0]} jobs`,
-      `${compactQuery} teilzeit vollzeit ${locationTerms[0]} stellenangebot`,
-      ...locationTerms.map(term => `${compactQuery} ${term} site:jobs.tt.com OR site:tirolerjobs.at OR site:karriere.at`),
+      `"${query}" "${cleanedLocation}" jobs`,
+      `${compactQuery} ${locationTerms[0]} stellenangebot`,
+      `${compactQuery} ${locationTerms[0]} job`,
+      ...locationTerms.slice(1).map(term => `${compactQuery} ${term} jobs`),
     ];
 
-    return [...new Set(variants.map(v => v.replace(/\s+/g, ' ').trim()).filter(Boolean))].slice(0, 7);
+    return [...new Set(variants.map(v => v.replace(/\s+/g, ' ').trim()).filter(Boolean))].slice(0, 4);
   }
 
   private getDomainPriority(url: string): number {
@@ -439,7 +438,7 @@ export class GeminiService {
       .map(url => this.normalizeUrl(url))
       .filter(Boolean)
       .slice(0, 30);
-    const resultTarget = 18;
+    const resultTarget = currentJobCount > 0 ? 12 : 10;
     const pagingInstruction = currentJobCount > 0
       ? `Finde weitere neue Treffer ab ungefähr Ergebnis ${currentJobCount + 1}. Wiederhole keine bekannten Top-Treffer und keine URL aus der Ausschlussliste.`
       : 'Finde die besten aktuellen Treffer.';
@@ -451,7 +450,7 @@ export class GeminiService {
       Gib keine Suchseiten, Login-Seiten, Job-Alarme, Bewerbungsformulare ohne Inserat oder allgemeinen Portalseiten zurück.
       Bevorzuge echte Inseratsdetailseiten von etablierten Jobportalen und Arbeitgeberseiten.
       Sortiere nach: 1. Standortnähe zu Tirol bzw. zum gewählten Ort, 2. Relevanz zur Suchanfrage, 3. Aktualität, 4. Direktheit der Inserats-URL.
-      Bevorzuge Jobs für Quereinsteiger, Hilfskräfte, Verkauf, Büro, Rezeption, Gastro, Pflegeassistenz, Lager, Fahrer und Support, wenn die Anfrage nicht enger ist.
+      Nutze die Suchanfrage wörtlich. Füge keine versteckten Zusatzkriterien hinzu, außer dem gewählten Ort und echten Job-/Stellenangebot-Begriffen.
       Liefere lieber weniger geprüfte Treffer als unsichere Treffer.
       ANTWORT NUR ALS JSON: { "summary": "...", "jobs": [{ "title": "...", "company": "...", "location": "...", "url": "...", "snippet": "...", "source": "...", "date": "...", "category": "..." }] }
     `;
