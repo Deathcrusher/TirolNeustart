@@ -22,6 +22,10 @@ export interface SearchResult {
   summary: string;
 }
 
+export interface SearchOptions {
+  knownUrls?: string[];
+}
+
 export enum JobPortal {
   TT = 'Tiroler Tageszeitung',
   OEH = 'ÖH Jobbörse',

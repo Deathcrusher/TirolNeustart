@@ -157,7 +157,9 @@ const App: React.FC = () => {
           groundingSources: []
         };
       } else {
-        data = await geminiService.searchJobs(activeQuery, undefined, jobs.length, activeLocation);
+        data = await geminiService.searchJobs(activeQuery, undefined, jobs.length, activeLocation, {
+          knownUrls: jobs.map(job => job.url)
+        });
       }
       
       const currentUrls = new Set(jobs.map(j => j.url));
