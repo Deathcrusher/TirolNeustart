@@ -4,14 +4,18 @@ import { indeedAtSource } from './indeedAt.js';
 import { jobsTtSource } from './jobsTt.js';
 import { karriereAtSource } from './karriereAt.js';
 import { metajobSource } from './metajob.js';
+import { oehJobboerseSource } from './oehJobboerse.js';
 import { tirolerJobsSource } from './tirolerJobs.js';
+import { willhabenJobsSource } from './willhabenJobs.js';
 
 const SOURCES = [
   jobsTtSource,
   tirolerJobsSource,
   hokifyAtSource,
+  oehJobboerseSource,
   karriereAtSource,
   metajobSource,
+  willhabenJobsSource,
   amsAtSource,
   indeedAtSource,
 ];
