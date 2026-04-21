@@ -169,7 +169,7 @@ const App: React.FC = () => {
       if (useJoobleOnly) {
         for (let attempt = 0; attempt < 3; attempt++) {
           nextPage += 1;
-          data = await jobSearchService.searchJobs(activeQuery, activeLocation, nextPage);
+          data = await jobSearchService.searchJobs(activeQuery, activeLocation, nextPage, selectedSource === 'Alle' ? '' : selectedSource);
           newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
 
           if (newUniqueJobs.length > 0 || data.jobs.length === 0) {
@@ -197,6 +197,38 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Load more error", err);
+      setError(getFriendlyError(err));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleSourceFilterChange = async (source: string) => {
+    setSelectedSource(source);
+    setLoadMoreNotice(null);
+
+    if (source === 'Alle' || !useJoobleOnly || loading || loadingMore) return;
+
+    const existingSourceJobs = jobs.filter((job) => normalizeSourceLabel(job.source) === source);
+    if (existingSourceJobs.length > 0) return;
+
+    setLoadingMore(true);
+    try {
+      const data = await jobSearchService.searchJobs(activeQuery, activeLocation, 0, source);
+      const currentUrls = new Set(jobs.map((job) => job.url));
+      const newUniqueJobs = data.jobs.filter((job) => !currentUrls.has(job.url));
+
+      if (newUniqueJobs.length > 0) {
+        setJobs((prev) => [...prev, ...newUniqueJobs]);
+        setSources((prev) => {
+          const existingUris = new Set(prev.map((item) => item.uri));
+          const newSources = data.groundingSources.filter((item) => !existingUris.has(item.uri));
+          return [...prev, ...newSources];
+        });
+      } else {
+        setLoadMoreNotice(`Bei ${source} wurden gerade keine zusätzlichen Treffer gefunden.`);
+      }
+    } catch (err: any) {
       setError(getFriendlyError(err));
     } finally {
       setLoadingMore(false);
@@ -482,7 +514,7 @@ const App: React.FC = () => {
                 {sourceOptions.map((source) => (
                   <button
                     key={source}
-                    onClick={() => setSelectedSource(source)}
+                    onClick={() => handleSourceFilterChange(source)}
                     className={`px-3 py-2 rounded-lg border text-sm font-bold transition-colors ${
                       selectedSource === source
                         ? 'bg-emerald-600 border-emerald-600 text-white'

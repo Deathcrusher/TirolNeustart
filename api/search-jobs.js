@@ -95,11 +95,13 @@ export default async function handler(request, response) {
     location = 'Tirol',
     page = 0,
     joobleApiKey = '',
+    sourceFilter = '',
   } = request.body || {};
 
   const cleanedQuery = String(query).trim();
   const cleanedLocation = String(location).trim() || 'Tirol';
   const numericPage = Number.isFinite(Number(page)) ? Math.max(0, Number(page)) : 0;
+  const cleanedSourceFilter = String(sourceFilter || '').trim();
 
   if (!cleanedQuery) {
     response.status(400).json({ error: 'Missing query' });
@@ -111,8 +113,9 @@ export default async function handler(request, response) {
       query: cleanedQuery,
       location: cleanedLocation,
       page: numericPage,
+      sourceFilter: cleanedSourceFilter,
     }),
-    fetchJooble({
+    cleanedSourceFilter && cleanedSourceFilter !== 'Jooble' ? Promise.resolve([]) : fetchJooble({
       apiKey: String(joobleApiKey || '').trim(),
       query: cleanedQuery,
       location: cleanedLocation,

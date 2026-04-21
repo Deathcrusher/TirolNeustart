@@ -10,7 +10,7 @@ class JobSearchService {
     }
   }
 
-  async searchJobs(query: string, location: string = 'Tirol', page: number = 0): Promise<SearchResult> {
+  async searchJobs(query: string, location: string = 'Tirol', page: number = 0, sourceFilter: string = ''): Promise<SearchResult> {
     try {
       const response = await fetch('/api/search-jobs', {
         method: 'POST',
@@ -21,6 +21,7 @@ class JobSearchService {
           query,
           location,
           page,
+          sourceFilter,
           joobleApiKey: this.resolveJoobleApiKey(),
         }),
       });

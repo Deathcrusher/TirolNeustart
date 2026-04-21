@@ -37,8 +37,13 @@ function withTimeout(promise, label) {
 }
 
 export async function searchCustomSources(input) {
+  const requestedSource = String(input.sourceFilter || '').trim();
+  const activeSources = requestedSource
+    ? SOURCES.filter((source) => source.label === requestedSource)
+    : SOURCES;
+
   const settled = await Promise.allSettled(
-    SOURCES.map((source) =>
+    activeSources.map((source) =>
       withTimeout(
         source.search(input).then((jobs) => ({
           source: source.id,
@@ -62,7 +67,7 @@ export async function searchCustomSources(input) {
 
   return {
     jobs,
-    sources: SOURCES.map((source) => source.label),
+    sources: activeSources.map((source) => source.label),
     errors,
   };
 }
