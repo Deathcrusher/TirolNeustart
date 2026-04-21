@@ -84,7 +84,7 @@ export const stepstoneAtSource = {
         'Accept': 'text/html,application/xhtml+xml',
         'User-Agent': 'TirolNeustartBot/0.1 (+https://github.com/Deathcrusher/TirolNeustart)',
       },
-      signal: AbortSignal.timeout(2500),
+      signal: AbortSignal.timeout(4500),
     });
 
     if (!response.ok) {

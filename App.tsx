@@ -219,7 +219,10 @@ const App: React.FC = () => {
   }, {});
   const sourceOptions = [
     'Alle',
-    ...Object.keys(sourceCounts).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
+    ...Array.from(new Set([
+      ...Object.keys(sourceCounts),
+      ...sources.map((source) => normalizeSourceLabel(source.title)),
+    ])).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
   ];
   const filteredJobs = selectedSource === 'Alle'
     ? jobs

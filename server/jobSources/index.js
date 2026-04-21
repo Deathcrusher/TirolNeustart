@@ -22,14 +22,15 @@ const SOURCES = [
   indeedAtSource,
 ];
 
-const SOURCE_TIMEOUT_MS = 3500;
+const DEFAULT_SOURCE_TIMEOUT_MS = 3500;
 
 function withTimeout(promise, label) {
   let timeoutId;
+  const timeoutMs = label === 'StepStone AT' ? 5000 : DEFAULT_SOURCE_TIMEOUT_MS;
   const timeout = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error(`${label} scraper timed out.`));
-    }, SOURCE_TIMEOUT_MS);
+    }, timeoutMs);
   });
 
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
