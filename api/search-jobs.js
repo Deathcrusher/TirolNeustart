@@ -2,7 +2,7 @@ import { searchCustomSources } from '../server/jobSources/index.js';
 import { dedupeJobs } from '../server/jobs/dedupe.js';
 
 const JOOBLE_BASE_URL = 'https://jooble.org/api';
-const RESULTS_PER_PAGE = 20;
+const RESULTS_PER_PAGE = 30;
 const SOURCE_URIS = {
   'jobs.tt.com': 'https://jobs.tt.com/job',
   'tirolerjobs.at': 'https://www.tirolerjobs.at/jobs',
@@ -15,6 +15,34 @@ const SOURCE_URIS = {
   'Indeed AT': 'https://at.indeed.com',
   'Jooble': 'https://jooble.org',
 };
+
+function sourceGroup(source = '') {
+  const normalized = String(source).toLowerCase();
+  if (normalized.includes('metajob')) return 'METAJob';
+  if (normalized.includes('jooble')) return 'Jooble';
+  return source || 'Unbekannt';
+}
+
+function diversifyBySource(jobs, limit) {
+  const buckets = new Map();
+  jobs.forEach((job) => {
+    const key = sourceGroup(job.source);
+    const bucket = buckets.get(key) || [];
+    bucket.push(job);
+    buckets.set(key, bucket);
+  });
+
+  const mixed = [];
+  while (mixed.length < limit && [...buckets.values()].some((bucket) => bucket.length > 0)) {
+    for (const bucket of buckets.values()) {
+      const job = bucket.shift();
+      if (job) mixed.push(job);
+      if (mixed.length >= limit) break;
+    }
+  }
+
+  return mixed;
+}
 
 async function fetchJooble({ apiKey, query, location, page }) {
   if (!apiKey) return [];
@@ -101,7 +129,7 @@ export default async function handler(request, response) {
     ...(customResult.status === 'fulfilled' ? customResult.value.sources : ['Custom scrapers']),
     ...(joobleJobs.length > 0 ? ['Jooble'] : []),
   ];
-  const jobs = dedupeJobs([...customJobs, ...joobleJobs]).slice(0, RESULTS_PER_PAGE);
+  const jobs = diversifyBySource(dedupeJobs([...customJobs, ...joobleJobs]), RESULTS_PER_PAGE);
 
   response.status(200).json({
     jobs,

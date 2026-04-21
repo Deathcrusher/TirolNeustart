@@ -33,6 +33,13 @@ const GEMINI_MODEL_OPTIONS = [
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (gründlicher)' },
 ];
 
+const normalizeSourceLabel = (source: string) => {
+  const normalized = source.toLowerCase();
+  if (normalized.includes('metajob')) return 'METAJob';
+  if (normalized.includes('jooble')) return 'Jooble';
+  return source;
+};
+
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('Quereinsteiger Jobs Tirol');
@@ -47,6 +54,7 @@ const App: React.FC = () => {
   const [loadMoreNotice, setLoadMoreNotice] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
+  const [selectedSource, setSelectedSource] = useState('Alle');
   
   // Settings state
   const [showSettings, setShowSettings] = useState(false);
@@ -115,6 +123,7 @@ const App: React.FC = () => {
     setJobs([]);
     setCurrentPage(0);
     setHasSearched(true);
+    setSelectedSource('Alle');
     setActiveQuery(targetQuery);
     setActiveLocation(location);
 
@@ -178,6 +187,7 @@ const App: React.FC = () => {
         setLoadMoreNotice('Gerade keine weiteren neuen Treffer gefunden. Versuch es später nochmal oder ändere den Suchbegriff.');
       } else {
         setJobs(prev => [...prev, ...newUniqueJobs]);
+        setSelectedSource('Alle');
         setSources(prev => {
           const existingUris = new Set(prev.map(s => s.uri));
           const newSources = (data?.groundingSources || []).filter(s => !existingUris.has(s.uri));
@@ -200,6 +210,11 @@ const App: React.FC = () => {
     { label: "Büroassistenz", icon: "fa-print", search: "Büroassistenz" },
     { label: "Verkauf & Mode", icon: "fa-tshirt", search: "Verkauf Mode" },
   ];
+
+  const sourceOptions = ['Alle', ...Array.from(new Set(jobs.map((job) => normalizeSourceLabel(job.source))))];
+  const filteredJobs = selectedSource === 'Alle'
+    ? jobs
+    : jobs.filter((job) => normalizeSourceLabel(job.source) === selectedSource);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
@@ -445,12 +460,30 @@ const App: React.FC = () => {
                  <p className="text-sm text-slate-500 mt-1">{summary}</p>
               </div>
               <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 self-start md:self-auto">
-                {jobs.length} Angebote gefunden
+                {filteredJobs.length} von {jobs.length} Angebote
               </span>
             </div>
 
+            {sourceOptions.length > 2 && (
+              <div className="flex flex-wrap gap-2">
+                {sourceOptions.map((source) => (
+                  <button
+                    key={source}
+                    onClick={() => setSelectedSource(source)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-bold transition-colors ${
+                      selectedSource === source
+                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-700'
+                    }`}
+                  >
+                    {source}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {jobs.map((job) => (
+              {filteredJobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
             </div>
