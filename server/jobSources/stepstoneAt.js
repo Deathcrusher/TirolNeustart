@@ -35,7 +35,10 @@ function cleanSegment(value) {
 }
 
 function parseJobs(html, sourceUrl, fallbackLocation) {
-  const blocks = [...html.matchAll(/<article[^>]+data-at=["']job-item["'][^>]*>[\s\S]*?(?=<article[^>]+data-at=["']job-item["'][^>]*>|<\/main>|$)/g)]
+  const resultStart = html.indexOf('data-at="unified-resultlist"');
+  const resultEnd = resultStart === -1 ? -1 : html.indexOf('id="app-footer"', resultStart);
+  const resultHtml = resultStart === -1 ? html : html.slice(resultStart, resultEnd === -1 ? undefined : resultEnd);
+  const blocks = [...resultHtml.matchAll(/<article[^>]+data-at=["']job-item["'][^>]*>[\s\S]*?(?=<article[^>]+data-at=["']job-item["'][^>]*>|<\/main>|$)/g)]
     .map((match) => match[0]);
 
   const jobs = blocks
@@ -55,7 +58,7 @@ function parseJobs(html, sourceUrl, fallbackLocation) {
         title,
         company: company || 'Unbekannt',
         location: location || fallbackLocation || 'Tirol',
-        snippet: snippet || 'Details im Inserat',
+        snippet: (snippet || 'Details im Inserat').slice(0, 280),
         url,
         source: 'StepStone AT',
         date: date || 'Aktuell',
@@ -81,6 +84,7 @@ export const stepstoneAtSource = {
         'Accept': 'text/html,application/xhtml+xml',
         'User-Agent': 'TirolNeustartBot/0.1 (+https://github.com/Deathcrusher/TirolNeustart)',
       },
+      signal: AbortSignal.timeout(2500),
     });
 
     if (!response.ok) {

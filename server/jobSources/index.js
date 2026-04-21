@@ -22,13 +22,29 @@ const SOURCES = [
   indeedAtSource,
 ];
 
+const SOURCE_TIMEOUT_MS = 3500;
+
+function withTimeout(promise, label) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} scraper timed out.`));
+    }, SOURCE_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export async function searchCustomSources(input) {
   const settled = await Promise.allSettled(
     SOURCES.map((source) =>
-      source.search(input).then((jobs) => ({
-        source: source.id,
-        jobs,
-      }))
+      withTimeout(
+        source.search(input).then((jobs) => ({
+          source: source.id,
+          jobs,
+        })),
+        source.label
+      )
     )
   );
 

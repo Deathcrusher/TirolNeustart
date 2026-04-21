@@ -40,6 +40,8 @@ const normalizeSourceLabel = (source: string) => {
   return source;
 };
 
+const SOURCE_FILTER_BLOCKLIST = new Set(['willhaben Jobs', 'AMS alle jobs', 'Indeed AT']);
+
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('Quereinsteiger Jobs Tirol');
@@ -211,7 +213,13 @@ const App: React.FC = () => {
     { label: "Verkauf & Mode", icon: "fa-tshirt", search: "Verkauf Mode" },
   ];
 
-  const sourceOptions = ['Alle', ...Array.from(new Set(jobs.map((job) => normalizeSourceLabel(job.source))))];
+  const sourceOptions = [
+    'Alle',
+    ...Array.from(new Set([
+      ...jobs.map((job) => normalizeSourceLabel(job.source)),
+      ...sources.map((source) => normalizeSourceLabel(source.title)),
+    ])).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
+  ];
   const filteredJobs = selectedSource === 'Alle'
     ? jobs
     : jobs.filter((job) => normalizeSourceLabel(job.source) === selectedSource);
