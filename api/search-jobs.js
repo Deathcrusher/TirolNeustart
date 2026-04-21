@@ -8,6 +8,7 @@ const SOURCE_URIS = {
   'tirolerjobs.at': 'https://www.tirolerjobs.at/jobs',
   'hokify.at': 'https://hokify.at/jobs',
   'ÖH Jobbörse': 'https://schwarzesbrett.oeh.ac.at/jobs/',
+  'StepStone AT': 'https://www.stepstone.at/jobs',
   'karriere.at': 'https://www.karriere.at/jobs/tirol',
   'METAJob': 'https://www.metajob.at',
   'willhaben Jobs': 'https://www.willhaben.at/jobs',

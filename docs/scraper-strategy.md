@@ -203,6 +203,7 @@ The first implementation step now exists:
 - `server/jobSources/tirolerJobs.js` adds tirolerjobs.at through its job sitemap and JobPosting detail pages.
 - `server/jobSources/hokifyAt.js` adds hokify.at through its server-rendered search result page.
 - `server/jobSources/oehJobboerse.js` adds the ÖH Schwarzes Brett job board through its server-rendered search result page.
+- `server/jobSources/stepstoneAt.js` adds StepStone AT through its server-rendered SEO result page.
 - `server/jobSources/karriereAt.js` is the first custom fetch-based scraper.
 - `server/jobSources/metajob.js` adds METAJob through its preloaded search state.
 - `server/jobSources/willhabenJobs.js` is registered defensively because willhaben.at disallows automated scraping without explicit permission.

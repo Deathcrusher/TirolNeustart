@@ -5,6 +5,7 @@ import { jobsTtSource } from './jobsTt.js';
 import { karriereAtSource } from './karriereAt.js';
 import { metajobSource } from './metajob.js';
 import { oehJobboerseSource } from './oehJobboerse.js';
+import { stepstoneAtSource } from './stepstoneAt.js';
 import { tirolerJobsSource } from './tirolerJobs.js';
 import { willhabenJobsSource } from './willhabenJobs.js';
 
@@ -13,6 +14,7 @@ const SOURCES = [
   tirolerJobsSource,
   hokifyAtSource,
   oehJobboerseSource,
+  stepstoneAtSource,
   karriereAtSource,
   metajobSource,
   willhabenJobsSource,

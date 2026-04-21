@@ -19,7 +19,12 @@ export function decodeHtml(value = '') {
 }
 
 export function stripTags(value = '') {
-  return decodeHtml(String(value).replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+  return decodeHtml(String(value)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function absolutizeUrl(url, baseUrl) {
