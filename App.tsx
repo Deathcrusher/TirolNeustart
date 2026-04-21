@@ -189,7 +189,6 @@ const App: React.FC = () => {
         setLoadMoreNotice('Gerade keine weiteren neuen Treffer gefunden. Versuch es später nochmal oder ändere den Suchbegriff.');
       } else {
         setJobs(prev => [...prev, ...newUniqueJobs]);
-        setSelectedSource('Alle');
         setSources(prev => {
           const existingUris = new Set(prev.map(s => s.uri));
           const newSources = (data?.groundingSources || []).filter(s => !existingUris.has(s.uri));
@@ -213,16 +212,19 @@ const App: React.FC = () => {
     { label: "Verkauf & Mode", icon: "fa-tshirt", search: "Verkauf Mode" },
   ];
 
+  const sourceCounts = jobs.reduce<Record<string, number>>((counts, job) => {
+    const source = normalizeSourceLabel(job.source);
+    counts[source] = (counts[source] || 0) + 1;
+    return counts;
+  }, {});
   const sourceOptions = [
     'Alle',
-    ...Array.from(new Set([
-      ...jobs.map((job) => normalizeSourceLabel(job.source)),
-      ...sources.map((source) => normalizeSourceLabel(source.title)),
-    ])).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
+    ...Object.keys(sourceCounts).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
   ];
   const filteredJobs = selectedSource === 'Alle'
     ? jobs
     : jobs.filter((job) => normalizeSourceLabel(job.source) === selectedSource);
+  const selectedSourceStillAvailable = selectedSource === 'Alle' || sourceOptions.includes(selectedSource);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
@@ -485,16 +487,31 @@ const App: React.FC = () => {
                     }`}
                   >
                     {source}
+                    {source !== 'Alle' && (
+                      <span className="ml-1 opacity-75">({sourceCounts[source] || 0})</span>
+                    )}
                   </button>
                 ))}
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </div>
+            {!selectedSourceStillAvailable && (
+              <div className="bg-white border border-slate-200 rounded-xl p-5 text-sm font-semibold text-slate-600">
+                Für {selectedSource} sind in den aktuell geladenen Treffern keine Angebote mehr vorhanden.
+              </div>
+            )}
+
+            {filteredJobs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredJobs.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+            ) : selectedSourceStillAvailable ? (
+              <div className="bg-white border border-slate-200 rounded-xl p-5 text-sm font-semibold text-slate-600">
+                Für {selectedSource} sind in den geladenen Treffern gerade keine Angebote sichtbar.
+              </div>
+            ) : null}
 
             <div className="flex flex-col items-center justify-center py-10">
                <button 
