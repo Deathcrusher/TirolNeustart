@@ -22,7 +22,7 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
 
   return (
     <article className="bg-white rounded-lg border border-zinc-200 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all overflow-hidden">
-      <div className="p-4 md:p-5">
+      <div className="p-3 sm:p-4 md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
             <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -38,11 +38,11 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
               )}
             </div>
 
-            <h3 className="mb-2 text-lg font-black leading-snug text-zinc-900">
+            <h3 className="mb-2 text-base font-black leading-snug text-zinc-900 sm:text-lg">
               {job.title}
             </h3>
 
-            <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-zinc-600">
+            <div className="mb-3 flex flex-col gap-2 text-sm font-semibold text-zinc-600 sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-2">
               <span className="inline-flex min-w-0 items-center gap-2">
                 <i className="fas fa-building text-zinc-400"></i>
                 <span className="truncate">{job.company}</span>
@@ -62,7 +62,7 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-700 md:w-auto"
           >
             Anzeigen
             <i className="fas fa-arrow-up-right-from-square text-xs"></i>

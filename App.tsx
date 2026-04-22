@@ -262,17 +262,17 @@ const App: React.FC = () => {
   const selectedSourceStillAvailable = selectedSource === 'Alle' || sourceOptions.includes(selectedSource);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+    <div className="min-h-screen flex flex-col bg-zinc-50 text-slate-800 font-sans">
       {/* Navbar */}
       <nav className="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between sm:px-4">
           <div className="flex items-center gap-2.5">
              <div className="bg-emerald-500 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-emerald-200 shadow-lg">
                 <i className="fas fa-seedling text-lg"></i>
              </div>
              <div>
-                <h1 className="text-lg font-black text-slate-800 leading-none tracking-tight">Tirol<span className="text-emerald-600">Neustart</span></h1>
-                <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Dein Weg zum neuen Job</p>
+                <h1 className="text-base font-black text-slate-800 leading-none tracking-tight sm:text-lg">Tirol<span className="text-emerald-600">Neustart</span></h1>
+                <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Neue Jobs in Tirol</p>
              </div>
           </div>
           <button
@@ -399,12 +399,12 @@ const App: React.FC = () => {
       )}
 
       {/* Search */}
-      <section className="border-b border-zinc-200 bg-white px-4 py-6">
+      <section className="border-b border-zinc-200 bg-white px-3 py-4 sm:px-4 sm:py-6">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="mb-1 text-xs font-black uppercase tracking-widest text-emerald-700">Jobsuche Tirol</p>
-              <h2 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">
+              <h2 className="text-xl font-black leading-tight tracking-tight text-zinc-900 sm:text-2xl md:text-3xl">
                 Finde Arbeit, die zu deinem Neustart passt.
               </h2>
             </div>
@@ -451,13 +451,13 @@ const App: React.FC = () => {
 
             <button
               type="submit"
-              className="rounded-lg bg-zinc-900 px-6 py-3 font-black text-white transition hover:bg-emerald-700 md:self-end"
+              className="w-full rounded-lg bg-zinc-900 px-6 py-3 font-black text-white transition hover:bg-emerald-700 md:w-auto md:self-end"
             >
               Suchen
             </button>
           </form>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="-mx-3 mt-4 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
             {categories.map((cat, idx) => (
               <button
                 key={idx}
@@ -473,7 +473,7 @@ const App: React.FC = () => {
       </section>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-6xl flex-grow px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl flex-grow px-3 py-4 sm:px-4 sm:py-6">
         
         {/* Loading */}
         {loading && (
@@ -488,7 +488,7 @@ const App: React.FC = () => {
 
         {/* Error */}
         {error && !loading && (
-          <div className="max-w-2xl mx-auto bg-white border-l-4 border-red-500 p-6 rounded-r-xl shadow-sm flex items-start gap-4">
+          <div className="max-w-2xl mx-auto bg-white border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex items-start gap-4 sm:p-6">
             <div className="bg-red-100 p-2 rounded-lg text-red-600 shrink-0">
                <i className="fas fa-bug"></i>
             </div>
@@ -501,8 +501,8 @@ const App: React.FC = () => {
 
         {/* Results */}
         {jobs.length > 0 && !loading && (
-          <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-            <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:gap-6">
+            <aside className="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
               <div className="rounded-lg border border-zinc-200 bg-white p-4">
                 <p className="mb-3 text-xs font-black uppercase tracking-widest text-zinc-500">Portale</p>
                 <div className="space-y-2">
@@ -530,11 +530,11 @@ const App: React.FC = () => {
               </div>
             </aside>
 
-            <section className="space-y-5">
-              <div className="rounded-lg border border-zinc-200 bg-white p-4">
+            <section className="space-y-4 sm:space-y-5">
+              <div className="rounded-lg border border-zinc-200 bg-white p-3 sm:p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h2 className="flex items-center gap-2 text-xl font-black text-zinc-900">
+                    <h2 className="flex items-center gap-2 text-lg font-black text-zinc-900 sm:text-xl">
                       <i className="fas fa-fire text-orange-500"></i>
                       Top Chancen
                     </h2>
@@ -543,6 +543,26 @@ const App: React.FC = () => {
                   <span className="w-fit rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
                     {filteredJobs.length} von {jobs.length} Angebote
                   </span>
+                </div>
+              </div>
+
+              <div className="lg:hidden">
+                <p className="mb-2 text-xs font-black uppercase tracking-widest text-zinc-500">Portale</p>
+                <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+                  {sourceOptions.map((source) => (
+                    <button
+                      key={source}
+                      onClick={() => handleSourceFilterChange(source)}
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-black transition-colors ${
+                        selectedSource === source
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
+                      }`}
+                    >
+                      <span>{source}</span>
+                      <span className="text-xs opacity-80">{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
