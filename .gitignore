@@ -7,3 +7,5 @@ build/
 
 # Vercel output
 .vercel/
+
+test-results/
