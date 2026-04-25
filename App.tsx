@@ -58,12 +58,15 @@ const App: React.FC = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedSource, setSelectedSource] = useState('Alle');
   
-  // Settings state
+// Settings state
   const [showSettings, setShowSettings] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [joobleApiKey, setJoobleApiKey] = useState('');
   const [geminiModel, setGeminiModel] = useState('');
   const [useJoobleOnly, setUseJoobleOnly] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
+  const [showSavedJobs, setShowSavedJobs] = useState(false);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -74,17 +77,38 @@ const App: React.FC = () => {
       const savedLocation = localStorage.getItem('job_location') || 'Tirol';
       const rawUseJooble = localStorage.getItem('use_jooble_only');
       const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
+      const savedDarkMode = localStorage.getItem('dark_mode') === 'true';
+      const savedJobsJson = localStorage.getItem('saved_jobs') || '[]';
+      const parsedSavedJobs = JSON.parse(savedJobsJson) as JobListing[];
       setGeminiApiKey(savedApiKey);
       setJoobleApiKey(savedJoobleApiKey);
       setGeminiModel(savedGeminiModel);
       setLocation(savedLocation);
       setActiveLocation(savedLocation);
+      setUseJoobleOnly(savedUseJooble);
+      setDarkMode(savedDarkMode);
+      setSavedJobs(parsedSavedJobs);
       geminiService.setApiKey(savedApiKey);
       geminiService.setModel(savedGeminiModel);
       joobleService.setApiKey(savedJoobleApiKey);
-      setUseJoobleOnly(savedUseJooble);
     } catch (e) {}
   }, []);
+
+  const toggleSaveJob = (job: JobListing) => {
+    setSavedJobs(prev => {
+      const isAlreadySaved = prev.some(j => j.url === job.url);
+      let newSavedJobs: JobListing[];
+      if (isAlreadySaved) {
+        newSavedJobs = prev.filter(j => j.url !== job.url);
+      } else {
+        newSavedJobs = [...prev, job];
+      }
+      try {
+        localStorage.setItem('saved_jobs', JSON.stringify(newSavedJobs));
+      } catch (e) {}
+      return newSavedJobs;
+    });
+  };
 
   const saveSettings = () => {
     try {
@@ -93,6 +117,7 @@ const App: React.FC = () => {
       localStorage.setItem('gemini_model', geminiModel);
       localStorage.setItem('job_location', location);
       localStorage.setItem('use_jooble_only', String(useJoobleOnly));
+      localStorage.setItem('dark_mode', String(darkMode));
       geminiService.setApiKey(geminiApiKey);
       geminiService.setModel(geminiModel);
       joobleService.setApiKey(joobleApiKey);
@@ -262,43 +287,57 @@ const App: React.FC = () => {
   const selectedSourceStillAvailable = selectedSource === 'Alle' || sourceOptions.includes(selectedSource);
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 text-slate-800 font-sans">
+    <div className={`min-h-screen flex flex-col font-sans ${darkMode ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-50 text-slate-800'}`}>
       {/* Navbar */}
-      <nav className="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-sm">
+      <nav className={`border-b sticky top-0 z-40 shadow-sm ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-slate-100'}`}>
         <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between sm:px-4">
           <div className="flex items-center gap-2.5">
              <div className="bg-emerald-500 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-emerald-200 shadow-lg">
                 <i className="fas fa-seedling text-lg"></i>
              </div>
              <div>
-                <h1 className="text-base font-black text-slate-800 leading-none tracking-tight sm:text-lg">Tirol<span className="text-emerald-600">Neustart</span></h1>
-                <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Neue Jobs in Tirol</p>
+                <h1 className={`text-base font-black leading-none tracking-tight sm:text-lg ${darkMode ? 'text-white' : 'text-slate-800'}`}>Tirol<span className="text-emerald-600">Neustart</span></h1>
+                <p className={`text-[10px] font-bold tracking-wider uppercase ${darkMode ? 'text-zinc-400' : 'text-slate-400'}`}>Neue Jobs in Tirol</p>
              </div>
           </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded-lg transition-colors text-sm font-semibold"
-          >
-            <i className="fas fa-cog"></i>
-            <span className="hidden md:inline">Einstellungen</span>
-          </button>
+          <div className="flex items-center gap-2">
+             <button
+               onClick={() => setShowSavedJobs(!showSavedJobs)}
+               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-semibold relative ${showSavedJobs ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : darkMode ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+             >
+               <i className="fas fa-bookmark"></i>
+               {savedJobs.length > 0 && (
+                 <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                   {savedJobs.length}
+                 </span>
+               )}
+               <span className="hidden md:inline">Gespeichert</span>
+             </button>
+             <button
+               onClick={() => setShowSettings(true)}
+               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-semibold ${darkMode ? 'bg-zinc-700 hover:bg-violet-900 text-zinc-300 hover:text-violet-300' : 'bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700'}`}
+             >
+               <i className="fas fa-cog"></i>
+               <span className="hidden md:inline">Einstellungen</span>
+             </button>
+           </div>
         </div>
       </nav>
 
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 animate-fade-in-up">
+          <div className={`rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 animate-fade-in-up ${darkMode ? 'bg-zinc-800' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <h3 className={`text-xl font-bold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                 <i className="fas fa-cog text-emerald-500"></i>
                 Einstellungen
               </h3>
               <button
                 onClick={() => setShowSettings(false)}
-                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-slate-100 hover:bg-slate-200'}`}
               >
-                <i className="fas fa-times text-slate-500"></i>
+                <i className={`fas fa-times ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}></i>
               </button>
             </div>
             
@@ -367,21 +406,40 @@ const App: React.FC = () => {
               </div>
 
               {/* Fast Search Toggle */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border-2 border-slate-200">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border-2 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center dark:bg-blue-900 dark:text-blue-400">
                     <i className="fas fa-briefcase"></i>
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800 text-sm">Schnelle Suche verwenden</p>
-                    <p className="text-xs text-slate-500">Eigene Scraper und Jooble kombinieren</p>
+                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">Schnelle Suche verwenden</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Eigene Scraper und Jooble kombinieren</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setUseJoobleOnly(!useJoobleOnly)}
-                  className={`relative w-14 h-8 rounded-lg transition-colors ${useJoobleOnly ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                  className={`relative w-14 h-8 rounded-lg transition-colors ${useJoobleOnly ? 'bg-emerald-500' : 'bg-slate-300'} dark:${useJoobleOnly ? 'bg-emerald-500' : 'bg-slate-600'}`}
                 >
                   <div className={`absolute top-1 w-6 h-6 bg-white rounded-md shadow-md transition-transform ${useJoobleOnly ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
+              {/* Dark Mode Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border-2 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center dark:bg-violet-900 dark:text-violet-400">
+                    <i className={`fas ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">Dark Mode</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Augen schonend im Dunkeln</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={`relative w-14 h-8 rounded-lg transition-colors ${darkMode ? 'bg-violet-500' : 'bg-slate-300'} dark:${darkMode ? 'bg-violet-500' : 'bg-slate-600'}`}
+                >
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-md shadow-md transition-transform ${darkMode ? 'left-7' : 'left-1'}`}></div>
                 </button>
               </div>
 
@@ -399,29 +457,29 @@ const App: React.FC = () => {
       )}
 
       {/* Search */}
-      <section className="border-b border-zinc-200 bg-white px-3 py-4 sm:px-4 sm:py-6">
+      <section className={`border-b px-3 py-4 sm:px-4 sm:py-6 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
         <div className="mx-auto max-w-6xl">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="mb-1 text-xs font-black uppercase tracking-widest text-emerald-700">Jobsuche Tirol</p>
-              <h2 className="text-xl font-black leading-tight tracking-tight text-zinc-900 sm:text-2xl md:text-3xl">
+              <h2 className={`text-xl font-black leading-tight tracking-tight sm:text-2xl md:text-3xl ${darkMode ? 'text-white' : 'text-zinc-900'}`}>
                 Finde Arbeit, die zu deinem Neustart passt.
               </h2>
             </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+            <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-emerald-900 dark:border-emerald-800 dark:text-emerald-200">
               <i className="fas fa-bolt"></i>
               {useJoobleOnly ? 'Schnelle Suche aktiv' : 'KI-Suche aktiv'}
             </div>
           </div>
 
-          <form onSubmit={(e) => handleSearch(e)} className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 md:grid-cols-[1fr_220px_auto]">
+          <form onSubmit={(e) => handleSearch(e)} className={`grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_220px_auto] ${darkMode ? 'border-zinc-700 bg-zinc-900' : 'border-zinc-200 bg-zinc-50'}`}>
             <label className="block">
-              <span className="mb-1 block text-xs font-black uppercase tracking-wider text-zinc-500">Was</span>
+              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Was</span>
               <div className="relative">
                 <i className="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600"></i>
                 <input
                   type="text"
-                  className="block w-full rounded-lg border border-zinc-200 bg-white py-4 pl-10 pr-4 font-semibold text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className={`block w-full rounded-lg border py-4 pl-10 pr-4 font-semibold outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${darkMode ? 'border-zinc-700 bg-zinc-800 text-white placeholder-zinc-400' : 'border-zinc-200 bg-white text-zinc-900'}`}
                   placeholder="Quereinsteiger, Verkauf, Service, Lager..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -430,7 +488,7 @@ const App: React.FC = () => {
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-xs font-black uppercase tracking-wider text-zinc-500">Wo</span>
+              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Wo</span>
               <select
                 value={location}
                 onChange={(e) => {
@@ -439,7 +497,7 @@ const App: React.FC = () => {
                     localStorage.setItem('job_location', e.target.value);
                   } catch (err) {}
                 }}
-                className="block w-full rounded-lg border border-zinc-200 bg-white px-3 py-4 font-semibold text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className={`block w-full rounded-lg border px-3 py-4 font-semibold outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${darkMode ? 'border-zinc-700 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-900'}`}
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -463,7 +521,7 @@ const App: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => handleSearch(undefined, cat.search)}
-                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-700 transition hover:border-emerald-400 hover:text-emerald-700 min-h-[48px]"
+                className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition hover:border-emerald-400 hover:text-emerald-700 min-h-[48px] ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'border-zinc-200 bg-white text-zinc-700'}`}
               >
                 <i className={`fas ${cat.icon} text-emerald-500`}></i>
                 {cat.label}
@@ -474,23 +532,49 @@ const App: React.FC = () => {
       </section>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-6xl flex-grow px-3 py-4 sm:px-4 sm:py-6">
+      <main className={`mx-auto w-full max-w-6xl flex-grow px-3 py-4 sm:px-4 sm:py-6 ${darkMode ? 'bg-zinc-900' : ''}`}>
         
+        {/* Saved Jobs View */}
+        {showSavedJobs && savedJobs.length > 0 && (
+          <div className="space-y-4">
+            <div className={`rounded-lg border p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
+              <div className="flex items-center gap-3">
+                <i className="fas fa-bookmark text-amber-500"></i>
+                <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-zinc-900'}`}>Gespeicherte Jobs</h2>
+                <span className={`text-sm font-bold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>({savedJobs.length})</span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {savedJobs.map((job) => (
+                <JobCard key={job.url} job={job} darkMode={darkMode} isSaved={true} onToggleSave={toggleSaveJob} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showSavedJobs && savedJobs.length === 0 && (
+          <div className={`rounded-lg border py-16 text-center ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
+            <i className="fas fa-bookmark text-4xl text-zinc-300 mb-4"></i>
+            <p className={`font-bold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Keine gespeicherten Jobs vorhanden</p>
+            <p className={`text-sm mt-2 ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>Speichere Jobs mit dem Lesezeichen-Button</p>
+          </div>
+        )}
+
         {/* Loading */}
         {loading && (
-          <div className="rounded-lg border border-zinc-200 bg-white py-20 text-center">
-            <div className="mx-auto mb-6 flex h-16 w-16 animate-pulse items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+          <div className={`rounded-lg border py-20 text-center ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
+            <div className={`mx-auto mb-6 flex h-16 w-16 animate-pulse items-center justify-center rounded-lg ${darkMode ? 'bg-zinc-700 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
                <i className="fas fa-binoculars text-2xl"></i>
             </div>
-            <h3 className="mb-2 text-xl font-black text-zinc-900">Wir scannen die Jobbörsen...</h3>
-            <p className="font-semibold text-zinc-500">Suche nach "{activeQuery}" in {activeLocation}</p>
+            <h3 className={`mb-2 text-xl font-black ${darkMode ? 'text-white' : 'text-zinc-900'}`}>Wir scannen die Jobbörsen...</h3>
+            <p className={`font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Suche nach "{activeQuery}" in {activeLocation}</p>
           </div>
         )}
 
         {/* Error */}
         {error && !loading && (
-          <div className="max-w-2xl mx-auto bg-white border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex items-start gap-4 sm:p-6">
-            <div className="bg-red-100 p-2 rounded-lg text-red-600 shrink-0">
+          <div className={`max-w-2xl mx-auto border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex items-start gap-4 sm:p-6 ${darkMode ? 'bg-zinc-800' : 'bg-white'}`}>
+            <div className={`bg-red-100 p-2 rounded-lg text-red-600 shrink-0 dark:bg-red-900 dark:text-red-400`}>
                <i className="fas fa-bug"></i>
             </div>
             <div>
@@ -504,8 +588,8 @@ const App: React.FC = () => {
         {jobs.length > 0 && !loading && (
           <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:gap-6">
             <aside className="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
-              <div className="rounded-lg border border-zinc-200 bg-white p-4">
-                <p className="mb-3 text-xs font-black uppercase tracking-widest text-zinc-500">Portale</p>
+              <div className={`rounded-lg border p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
+                <p className={`mb-3 text-xs font-black uppercase tracking-widest ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Portale</p>
                 <div className="space-y-2">
                   {sourceOptions.map((source) => (
                     <button
@@ -514,7 +598,9 @@ const App: React.FC = () => {
                       className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-black transition-colors ${
                         selectedSource === source
                           ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
+                          : darkMode
+                            ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-emerald-400 hover:text-emerald-700'
+                            : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
                       }`}
                     >
                       <span>{source}</span>
@@ -524,31 +610,31 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-zinc-200 bg-white p-4">
-                <p className="mb-2 text-xs font-black uppercase tracking-widest text-zinc-500">Aktive Suche</p>
-                <p className="text-sm font-black text-zinc-900">{activeQuery}</p>
-                <p className="mt-1 text-sm font-semibold text-zinc-500">{activeLocation}</p>
+              <div className={`rounded-lg border p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
+                <p className={`mb-2 text-xs font-black uppercase tracking-widest ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Aktive Suche</p>
+                <p className={`text-sm font-black ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{activeQuery}</p>
+                <p className={`mt-1 text-sm font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{activeLocation}</p>
               </div>
             </aside>
 
             <section className="space-y-4 sm:space-y-5">
-              <div className="rounded-lg border border-zinc-200 bg-white p-3 sm:p-4">
+              <div className={`rounded-lg border p-3 sm:p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h2 className="flex items-center gap-2 text-lg font-black text-zinc-900 sm:text-xl">
+                    <h2 className={`flex items-center gap-2 text-lg font-black sm:text-xl ${darkMode ? 'text-white' : 'text-zinc-900'}`}>
                       <i className="fas fa-fire text-orange-500"></i>
                       Top Chancen
                     </h2>
-                    <p className="mt-1 text-sm font-semibold text-zinc-500">{summary}</p>
+                    <p className={`mt-1 text-sm font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{summary}</p>
                   </div>
-                  <span className="w-fit rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
+                  <span className={`w-fit rounded-lg border border-emerald-200 px-3 py-2 text-xs font-black ${darkMode ? 'bg-emerald-900 border-emerald-800 text-emerald-200' : 'bg-emerald-50 text-emerald-700'}`}>
                     {filteredJobs.length} von {jobs.length} Angebote
                   </span>
                 </div>
               </div>
 
               <div className="lg:hidden">
-                <p className="mb-2 text-xs font-black uppercase tracking-widest text-zinc-500">Portale</p>
+                <p className={`mb-2 text-xs font-black uppercase tracking-widest ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Portale</p>
                 <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
                   {sourceOptions.map((source) => (
                     <button
@@ -557,7 +643,9 @@ const App: React.FC = () => {
                       className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition-colors min-h-[48px] ${
                         selectedSource === source
                           ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
+                          : darkMode
+                            ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-emerald-400 hover:text-emerald-700'
+                            : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
                       }`}
                     >
                       <span>{source}</span>
@@ -568,7 +656,7 @@ const App: React.FC = () => {
               </div>
 
               {!selectedSourceStillAvailable && (
-                <div className="rounded-lg border border-zinc-200 bg-white p-5 text-sm font-bold text-zinc-600">
+                <div className={`rounded-lg border p-5 text-sm font-bold ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300' : 'border-zinc-200 bg-white text-zinc-600'}`}>
                   Für {selectedSource} sind in den aktuell geladenen Treffern keine Angebote mehr vorhanden.
                 </div>
               )}
@@ -576,32 +664,36 @@ const App: React.FC = () => {
               {filteredJobs.length > 0 ? (
                 <div className="space-y-3">
                   {filteredJobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
+                    <JobCard key={job.id} job={job} darkMode={darkMode} isSaved={savedJobs.some(j => j.url === job.url)} onToggleSave={toggleSaveJob} />
                   ))}
                 </div>
               ) : selectedSourceStillAvailable ? (
-                <div className="rounded-lg border border-zinc-200 bg-white p-5 text-sm font-bold text-zinc-600">
+                <div className={`rounded-lg border p-5 text-sm font-bold ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300' : 'border-zinc-200 bg-white text-zinc-600'}`}>
                   Für {selectedSource} sind in den geladenen Treffern gerade keine Angebote sichtbar.
                 </div>
               ) : null}
 
               <div className="flex flex-col items-center justify-center py-8">
                 <button
-                  onClick={handleLoadMore}
+onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-8 py-4 font-bold text-zinc-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50 min-h-[56px] text-base"
+                  className={`inline-flex items-center gap-3 rounded-lg border px-8 py-4 font-bold shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50 min-h-[56px] text-base ${
+                    darkMode
+                      ? 'border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700'
+                      : 'border-zinc-200 bg-white text-zinc-800'
+                  }`}
                 >
                   {loadingMore ? (
                     <i className="fas fa-circle-notch fa-spin text-emerald-600"></i>
                   ) : (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-md ${darkMode ? 'bg-emerald-900 text-emerald-200' : 'bg-emerald-50 text-emerald-700'}`}>
                       <i className="fas fa-plus"></i>
                     </span>
                   )}
                   <span>Weitere Chancen anzeigen</span>
                 </button>
                 {loadMoreNotice && (
-                  <p className="mt-4 max-w-md text-center text-sm font-bold text-zinc-500">
+                  <p className={`mt-4 max-w-md text-center text-sm font-bold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
                     {loadMoreNotice}
                   </p>
                 )}
@@ -612,19 +704,19 @@ const App: React.FC = () => {
 
         {/* Empty State / Intro */}
         {!hasSearched && !loading && (
-           <div className="text-center py-20 opacity-50">
-              <i className="fas fa-arrow-up text-4xl text-slate-300 animate-bounce mb-4"></i>
-              <p className="text-slate-400">Wähle eine Kategorie oder starte eine Suche</p>
+           <div className={`text-center py-20 ${darkMode ? 'opacity-60' : 'opacity-50'}`}>
+               <i className={`fas fa-arrow-up text-4xl ${darkMode ? 'text-zinc-600' : 'text-slate-300'} animate-bounce mb-4`}></i>
+               <p className={darkMode ? 'text-zinc-500' : 'text-slate-400'}>Wähle eine Kategorie oder starte eine Suche</p>
            </div>
         )}
 
         {/* Sources */}
         {sources.length > 0 && !loading && (
            <div className="mt-16 text-center">
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Geprüfte Job-Quellen</p>
-             <div className="flex flex-wrap justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+             <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${darkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Geprüfte Job-Quellen</p>
+             <div className={`flex flex-wrap justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity ${darkMode ? 'opacity-40 hover:opacity-80' : ''}`}>
                {sources.map((s, i) => (
-                 <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-500 hover:text-emerald-600 bg-white border border-slate-200 px-2 py-1 rounded hover:border-emerald-300 transition-colors truncate max-w-[150px]">
+                 <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className={`text-[10px] hover:text-emerald-600 bg-white border px-2 py-1 rounded hover:border-emerald-300 transition-colors truncate max-w-[150px] ${darkMode ? 'text-zinc-400 border-zinc-700 bg-zinc-800' : 'text-slate-500 border-slate-200'}`}>
                    {s.title}
                  </a>
                ))}
