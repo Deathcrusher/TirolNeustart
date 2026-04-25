@@ -425,19 +425,20 @@ const App: React.FC = () => {
               </div>
 
               {/* Dark Mode Toggle */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border-2 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+              <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${darkMode ? 'bg-zinc-700 border-zinc-600' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center dark:bg-violet-900 dark:text-violet-400">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${darkMode ? 'bg-violet-900 text-violet-400' : 'bg-violet-100 text-violet-600'}`}>
                     <i className={`fas ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">Dark Mode</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Augen schonend im Dunkeln</p>
+                    <p className={`font-bold text-sm ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>Dark Mode</p>
+                    <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Augen schonend im Dunkeln</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className={`relative w-14 h-8 rounded-lg transition-colors ${darkMode ? 'bg-violet-500' : 'bg-slate-300'} dark:${darkMode ? 'bg-violet-500' : 'bg-slate-600'}`}
+                  className={`relative w-14 h-8 rounded-lg transition-colors ${darkMode ? 'bg-violet-500' : 'bg-slate-300'}`}
+                  aria-label="Toggle Dark Mode"
                 >
                   <div className={`absolute top-1 w-6 h-6 bg-white rounded-md shadow-md transition-transform ${darkMode ? 'left-7' : 'left-1'}`}></div>
                 </button>
@@ -500,7 +501,7 @@ const App: React.FC = () => {
                 className={`block w-full rounded-lg border px-3 py-4 font-semibold outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${darkMode ? 'border-zinc-700 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-900'}`}
               >
                 {LOCATION_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
+                  <option key={option} value={option} className={darkMode ? 'bg-zinc-800' : ''}>
                     {option === 'Tirol' ? 'Tirol gesamt' : option}
                   </option>
                 ))}
@@ -509,7 +510,7 @@ const App: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-zinc-900 px-6 py-4 font-bold text-white transition hover:bg-emerald-700 md:py-3 md:w-auto md:self-end text-base"
+              className={`w-full rounded-lg px-6 py-4 font-bold text-white transition md:py-3 md:w-auto md:self-end text-base ${darkMode ? 'bg-violet-600 hover:bg-violet-700' : 'bg-zinc-900 hover:bg-emerald-700'}`}
             >
               <i className="fas fa-search md:hidden mr-2"></i>
               Suchen
@@ -521,9 +522,9 @@ const App: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => handleSearch(undefined, cat.search)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition hover:border-emerald-400 hover:text-emerald-700 min-h-[48px] ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'border-zinc-200 bg-white text-zinc-700'}`}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition min-h-[48px] ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:border-violet-400 hover:text-violet-300' : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'}`}
               >
-                <i className={`fas ${cat.icon} text-emerald-500`}></i>
+                <i className={`fas ${cat.icon} ${darkMode ? 'text-violet-400' : 'text-emerald-500'}`}></i>
                 {cat.label}
               </button>
             ))}
