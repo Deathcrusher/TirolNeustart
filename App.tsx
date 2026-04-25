@@ -421,7 +421,7 @@ const App: React.FC = () => {
                 <i className="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600"></i>
                 <input
                   type="text"
-                  className="block w-full rounded-lg border border-zinc-200 bg-white py-3 pl-10 pr-4 font-semibold text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="block w-full rounded-lg border border-zinc-200 bg-white py-4 pl-10 pr-4 font-semibold text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   placeholder="Quereinsteiger, Verkauf, Service, Lager..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -439,7 +439,7 @@ const App: React.FC = () => {
                     localStorage.setItem('job_location', e.target.value);
                   } catch (err) {}
                 }}
-                className="block w-full rounded-lg border border-zinc-200 bg-white px-3 py-3 font-semibold text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="block w-full rounded-lg border border-zinc-200 bg-white px-3 py-4 font-semibold text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -451,8 +451,9 @@ const App: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-zinc-900 px-6 py-3 font-black text-white transition hover:bg-emerald-700 md:w-auto md:self-end"
+              className="w-full rounded-lg bg-zinc-900 px-6 py-4 font-bold text-white transition hover:bg-emerald-700 md:py-3 md:w-auto md:self-end text-base"
             >
+              <i className="fas fa-search md:hidden mr-2"></i>
               Suchen
             </button>
           </form>
@@ -462,7 +463,7 @@ const App: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => handleSearch(undefined, cat.search)}
-                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700 transition hover:border-emerald-400 hover:text-emerald-700"
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-700 transition hover:border-emerald-400 hover:text-emerald-700 min-h-[48px]"
               >
                 <i className={`fas ${cat.icon} text-emerald-500`}></i>
                 {cat.label}
@@ -553,7 +554,7 @@ const App: React.FC = () => {
                     <button
                       key={source}
                       onClick={() => handleSourceFilterChange(source)}
-                      className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-black transition-colors ${
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition-colors min-h-[48px] ${
                         selectedSource === source
                           ? 'border-emerald-600 bg-emerald-600 text-white'
                           : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
@@ -588,7 +589,7 @@ const App: React.FC = () => {
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-6 py-3 font-black text-zinc-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-8 py-4 font-bold text-zinc-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50 min-h-[56px] text-base"
                 >
                   {loadingMore ? (
                     <i className="fas fa-circle-notch fa-spin text-emerald-600"></i>
