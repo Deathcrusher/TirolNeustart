@@ -190,6 +190,7 @@ const App: React.FC = () => {
     setJobs([]);
     setCurrentPage(0);
     setHasSearched(true);
+    setShowSavedJobs(false);
     setSelectedSource('Alle');
     setActiveQuery(targetQuery);
     setActiveLocation(location);
@@ -326,29 +327,38 @@ const App: React.FC = () => {
 
   if (!authChecked || !isAuthenticated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 text-zinc-800">
-        <section className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-7 shadow-xl sm:p-9">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
-              <i className="fas fa-seedling text-xl"></i>
+      <main className="auth-screen">
+        <section className="auth-panel">
+          <div className="auth-brand">
+            <div className="auth-brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40" fill="none">
+                <path d="M4 29.5 15.8 12l6.4 9.1 3.5-4.7L36 29.5H4Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+                <path d="M8 33h24" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
             </div>
-            <div>
-              <h1 className="text-xl font-black">Tirol<span className="text-emerald-600">Neustart</span></h1>
-              <p className="text-sm text-zinc-500">Private Jobsuche</p>
+            <div className="auth-brand-copy">
+              <h1 className="auth-brand-name">Tirol<span>Neustart</span></h1>
+              <p className="auth-brand-caption">Private Jobsuche</p>
             </div>
           </div>
 
+          <div className="auth-intro">
+            <p className="auth-eyebrow">Dein persönlicher Jobfinder</p>
+            <h2>Schön, dass du da bist.</h2>
+            <p>Melde dich an, um deine Jobsuche fortzusetzen.</p>
+          </div>
+
           {!authChecked ? (
-            <p className="py-4 text-sm text-zinc-600">Zugriff wird geprüft …</p>
+            <p className="auth-status">Zugriff wird geprüft …</p>
           ) : authSetupError ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-bold">Der Zugriffsschutz ist noch nicht eingerichtet.</p>
-              <p className="mt-2">{authSetupError}</p>
+            <div className="auth-setup-error" role="status">
+              <strong>Der Zugriffsschutz ist noch nicht eingerichtet.</strong>
+              <p>{authSetupError}</p>
             </div>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="auth-form">
               <div>
-                <label htmlFor="access-username" className="mb-2 block text-sm font-bold">Benutzername</label>
+                <label htmlFor="access-username" className="auth-label">Benutzername</label>
                 <input
                   id="access-username"
                   type="text"
@@ -357,11 +367,11 @@ const App: React.FC = () => {
                   required
                   value={authUsername}
                   onChange={(event) => setAuthUsername(event.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="auth-input"
                 />
               </div>
               <div>
-                <label htmlFor="access-password" className="mb-2 block text-sm font-bold">Zugangspasswort</label>
+                <label htmlFor="access-password" className="auth-label">Zugangspasswort</label>
                 <input
                   id="access-password"
                   type="password"
@@ -369,11 +379,11 @@ const App: React.FC = () => {
                   required
                   value={authPassword}
                   onChange={(event) => setAuthPassword(event.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="auth-input"
                 />
               </div>
-              {authError && <p role="alert" className="text-sm font-medium text-red-600">{authError}</p>}
-              <button type="submit" className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white transition hover:bg-emerald-700">
+              {authError && <p role="alert" className="auth-error">{authError}</p>}
+              <button type="submit" className="auth-submit">
                 Anmelden
               </button>
             </form>
@@ -384,48 +394,49 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans ${darkMode ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-50 text-slate-800'}`}>
+    <div className={`site-shell ${darkMode ? 'is-dark' : ''}`}>
       {/* Navbar */}
-      <nav className={`border-b sticky top-0 z-40 shadow-sm ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-slate-100'}`}>
-        <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between sm:px-4">
-          <div className="flex items-center gap-2.5">
-             <div className="bg-emerald-500 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-emerald-200 shadow-lg">
-                <i className="fas fa-seedling text-lg"></i>
-             </div>
-             <div>
-                <h1 className={`text-base font-black leading-none tracking-tight sm:text-lg ${darkMode ? 'text-white' : 'text-slate-800'}`}>Tirol<span className="text-emerald-600">Neustart</span></h1>
-                <p className={`text-[10px] font-bold tracking-wider uppercase ${darkMode ? 'text-zinc-400' : 'text-slate-400'}`}>Neue Jobs in Tirol</p>
-             </div>
-          </div>
-          <div className="flex items-center gap-2">
+      <nav className="site-nav">
+        <div className="site-nav__inner">
+          <a className="brand-lockup" href="#start" aria-label="TirolNeustart Startseite">
+            <div className="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40" fill="none">
+                <path d="M4 29.5 15.8 12l6.4 9.1 3.5-4.7L36 29.5H4Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+                <path d="m12.2 29.5 4.9-7.3 4.7 7.3M25.8 23.7l2.6-3.5 5.1 9.3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M8 33h24" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="brand-name">Tirol<span>Neustart</span></h1>
+              <p className="brand-caption">Ein Jobfinder für neue Wege</p>
+            </div>
+          </a>
+          <div className="nav-actions">
              {!import.meta.env.DEV && (
                <button
                  onClick={() => void handleLogout()}
-                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${darkMode ? 'bg-zinc-700 text-zinc-300 hover:bg-red-900 hover:text-red-200' : 'bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-700'}`}
+                 className="nav-action"
                  aria-label="Abmelden"
                >
                  <i className="fas fa-sign-out-alt"></i>
-                 <span className="hidden md:inline">Abmelden</span>
+                 <span>Abmelden</span>
                </button>
              )}
              <button
                onClick={() => setShowSavedJobs(!showSavedJobs)}
-               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-semibold relative ${showSavedJobs ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : darkMode ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+               className={`nav-action ${showSavedJobs ? 'nav-action--active' : ''}`}
+               aria-pressed={showSavedJobs}
              >
                <i className="fas fa-bookmark"></i>
-               {savedJobs.length > 0 && (
-                 <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                   {savedJobs.length}
-                 </span>
-               )}
-               <span className="hidden md:inline">Gespeichert</span>
+               <span>Merkliste</span>
+               {savedJobs.length > 0 && <span className="nav-action__count">{savedJobs.length}</span>}
              </button>
              <button
                onClick={() => setShowSettings(true)}
-               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-semibold ${darkMode ? 'bg-zinc-700 hover:bg-violet-900 text-zinc-300 hover:text-violet-300' : 'bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700'}`}
+               className="nav-action"
              >
                <i className="fas fa-cog"></i>
-               <span className="hidden md:inline">Einstellungen</span>
+               <span>Einstellungen</span>
              </button>
            </div>
         </div>
@@ -433,10 +444,12 @@ const App: React.FC = () => {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 animate-fade-in-up ${darkMode ? 'bg-zinc-800' : 'bg-white'}`}>
+        <div className="settings-overlay" role="presentation" onClick={(event) => {
+          if (event.target === event.currentTarget) setShowSettings(false);
+        }}>
+          <div className={`settings-panel ${darkMode ? 'is-dark' : ''}`} role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-xl font-bold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+              <h3 id="settings-title" className={`text-xl font-bold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                 <i className="fas fa-cog text-emerald-500"></i>
                 Einstellungen
               </h3>
@@ -532,66 +545,76 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Brand story and personal search profile */}
+      <section className="hero-shell" id="start">
+        <div className="hero-shell__inner">
+          <div className="hero-overline">Für deinen nächsten Schritt in Tirol</div>
+          <div className="hero-grid">
+            <div className="hero-copy">
+              <h2>Arbeit, die<br />ins Leben <em>passt.</em></h2>
+              <p className="hero-copy__lead">
+                Ein Neustart muss sich gut anfühlen. Wir suchen Teilzeitstellen, die Platz lassen für alles, was dir sonst noch wichtig ist.
+              </p>
+              <div className="hero-copy__foot">
+                <i className="fas fa-sun"></i>
+                <span>Mit Ruhe suchen. Mit Zuversicht starten.</span>
+              </div>
+            </div>
+
+            <aside className="profile-card" aria-label="Connies Suchprofil">
+              <div className="profile-card__head">
+                <span className="profile-card__label"><i className="fas fa-sparkles"></i> Connies Suchprofil</span>
+                <span className="profile-card__badge"><span></span> persönlich</span>
+              </div>
+              <h3>Mehr Raum für deine Pläne.</h3>
+              <p className="profile-card__copy">Die passende Arbeit soll sich an dein Leben anpassen – und nicht umgekehrt.</p>
+              <div className="profile-card__metrics">
+                <div className="profile-metric"><strong>≤20</strong><span>Stunden pro Woche</span></div>
+                <div className="profile-metric"><strong>Sa</strong><span>bleibt frei</span></div>
+              </div>
+              <div className="profile-card__tags">
+                <span>Freitag nachmittags frei</span>
+                <span>Make-up-Ausbildung</span>
+              </div>
+              <svg className="profile-card__landscape" viewBox="0 0 520 100" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 74 95 31l67 39 89-60 94 58 70-32 105 50v14H0Z" fill="#b9c8a9" />
+                <path d="m0 76 95-45 29 17-20-4-9 7 31-5 36 24 89-60 41 25-27-9-16 8 28-5 47 30 70-32 32 19-19-5-12 8 28-5 97 45H0Z" fill="#8fa78b" />
+                <path d="M0 83c86-18 143 3 224-2s160-20 296 2v17H0Z" fill="#718c74" />
+              </svg>
+            </aside>
+          </div>
+          <p className="hero-footnote">Weniger Druck. Mehr Perspektive. Dein Tempo.</p>
+        </div>
+      </section>
+
       {/* Search */}
-      <section className={`border-b px-3 py-4 sm:px-4 sm:py-6 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <section className="search-wrap" aria-label="Jobs suchen">
+        <div className="search-card">
+          <div className="search-card__heading">
             <div>
-              <p className="mb-1 text-xs font-black uppercase tracking-widest text-emerald-700">Jobsuche Tirol</p>
-              <h2 className={`text-xl font-black leading-tight tracking-tight sm:text-2xl md:text-3xl ${darkMode ? 'text-white' : 'text-zinc-900'}`}>
-                Finde Arbeit, die zu deinem Neustart passt.
-              </h2>
+              <h2 className="search-card__title">Wonach suchst du?</h2>
+              <p className="search-card__hint">Ein Begriff genügt – wir kümmern uns um den Rest.</p>
             </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-emerald-900 dark:border-emerald-800 dark:text-emerald-200">
-              <i className="fas fa-bolt"></i>
-              {useFastSearch ? 'Schnelle Suche aktiv' : 'GPT-6-Luna-Suche aktiv'}
-            </div>
+            <span className="search-engine"><i className="fas fa-wand-magic-sparkles"></i>{useFastSearch ? 'Schnelle Suche' : 'KI-Suche mit GPT-6 Luna'}</span>
           </div>
 
-          <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${darkMode ? 'border-zinc-700 bg-zinc-900 text-zinc-300' : 'border-emerald-100 bg-emerald-50 text-emerald-900'}`}>
-            <span className="font-bold">Bei der KI-Suche berücksichtigt:</span>{' '}
-            Teilzeit bis 20 Stunden pro Woche · Samstag frei · Freitag nur bis Mittag · Homeoffice bevorzugt
-          </div>
-
-          <label className={`mb-4 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-bold ${darkMode ? 'border-zinc-700 bg-zinc-900 text-zinc-200' : 'border-zinc-200 bg-white text-zinc-800'}`}>
-            <input
-              type="checkbox"
-              checked={remoteOnly}
-              onChange={(event) => {
-                const nextRemoteOnly = event.target.checked;
-                setRemoteOnly(nextRemoteOnly);
-                try {
-                  localStorage.setItem('remote_only', String(nextRemoteOnly));
-                } catch (error) {}
-                if (hasSearched) {
-                  void handleSearch(undefined, query || activeQuery, nextRemoteOnly);
-                }
-              }}
-              className="h-5 w-5 accent-emerald-600"
-            />
-            <span className="flex-1">Nur Remote-Jobs anzeigen</span>
-            <span className={`text-xs font-medium ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
-              {remoteOnly ? 'Aktiv' : 'Alle Arbeitsorte'}
-            </span>
-          </label>
-
-          <form onSubmit={(e) => handleSearch(e)} className={`grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_220px_auto] ${darkMode ? 'border-zinc-700 bg-zinc-900' : 'border-zinc-200 bg-zinc-50'}`}>
-            <label className="block">
-              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Was</span>
-              <div className="relative">
-                <i className="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600"></i>
+          <form onSubmit={(e) => handleSearch(e)} className="job-search-form">
+            <label>
+              <span className="field-label">Beruf oder Stichwort</span>
+              <div className="search-field">
+                <i className="fas fa-magnifying-glass search-field__icon" aria-hidden="true"></i>
                 <input
                   type="text"
-                  className={`block w-full rounded-lg border py-4 pl-10 pr-4 font-semibold outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${darkMode ? 'border-zinc-700 bg-zinc-800 text-white placeholder-zinc-400' : 'border-zinc-200 bg-white text-zinc-900'}`}
-                  placeholder="Teilzeitstelle, Beauty, Verkauf, Service, Büro..."
+                  className="search-input"
+                  placeholder="Zum Beispiel Büro, Beauty oder Verkauf"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
             </label>
 
-            <label className="block">
-              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Wo</span>
+            <label>
+              <span className="field-label">Region</span>
               <select
                 value={location}
                 onChange={(e) => {
@@ -600,34 +623,51 @@ const App: React.FC = () => {
                     localStorage.setItem('job_location', e.target.value);
                   } catch (err) {}
                 }}
-                className={`block w-full rounded-lg border px-3 py-4 font-semibold outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${darkMode ? 'border-zinc-700 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-900'}`}
+                className="search-select"
               >
                 {LOCATION_OPTIONS.map((option) => (
-                  <option key={option} value={option} className={darkMode ? 'bg-zinc-800' : ''}>
-                    {option === 'Tirol' ? 'Tirol gesamt' : option}
+                  <option key={option} value={option}>
+                    {option === 'Tirol' ? 'Ganz Tirol' : option}
                   </option>
                 ))}
               </select>
             </label>
 
-            <button
-              type="submit"
-              className={`w-full rounded-lg px-6 py-4 font-bold text-white transition md:py-3 md:w-auto md:self-end text-base ${darkMode ? 'bg-violet-600 hover:bg-violet-700' : 'bg-zinc-900 hover:bg-emerald-700'}`}
-            >
-              <i className="fas fa-search md:hidden mr-2"></i>
-              Suchen
+            <button type="submit" className="search-submit">
+              Suchen <i className="fas fa-arrow-right" aria-hidden="true"></i>
             </button>
           </form>
 
-          <div className="-mx-3 mt-4 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
-            {categories.map((cat, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSearch(undefined, cat.search)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition min-h-[48px] ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:border-violet-400 hover:text-violet-300' : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'}`}
-              >
-                <i className={`fas ${cat.icon} ${darkMode ? 'text-violet-400' : 'text-emerald-500'}`}></i>
-                {cat.label}
+          <div className="search-options">
+            <label className="remote-toggle">
+              <input
+                type="checkbox"
+                checked={remoteOnly}
+                onChange={(event) => {
+                  const nextRemoteOnly = event.target.checked;
+                  setRemoteOnly(nextRemoteOnly);
+                  try {
+                    localStorage.setItem('remote_only', String(nextRemoteOnly));
+                  } catch (error) {}
+                  if (hasSearched) {
+                    void handleSearch(undefined, query || activeQuery, nextRemoteOnly);
+                  }
+                }}
+              />
+              <span className="remote-toggle__switch" aria-hidden="true"></span>
+              <span>Nur Remote-Jobs</span>
+              <span className="remote-toggle__state">{remoteOnly ? 'aktiv' : 'optional'}</span>
+            </label>
+            <div className="search-rules" aria-label="Connies Arbeitswünsche">
+              <strong>Wichtig für Connie</strong>
+              <span>bis 20 Std.</span><span>Samstag frei</span><span>Freitag ab Mittag frei</span>
+            </div>
+          </div>
+
+          <div className="category-row" aria-label="Beliebte Suchbereiche">
+            {categories.map((cat) => (
+              <button key={cat.label} onClick={() => handleSearch(undefined, cat.search)} className="category-chip">
+                <i className={`fas ${cat.icon}`} aria-hidden="true"></i>{cat.label}
               </button>
             ))}
           </div>
@@ -635,19 +675,17 @@ const App: React.FC = () => {
       </section>
 
       {/* Main Content */}
-      <main className={`mx-auto w-full max-w-6xl flex-grow px-3 py-4 sm:px-4 sm:py-6 ${darkMode ? 'bg-zinc-900' : ''}`}>
+      <main className="content-shell">
         
         {/* Saved Jobs View */}
         {showSavedJobs && savedJobs.length > 0 && (
-          <div className="space-y-4">
-            <div className={`rounded-lg border p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-              <div className="flex items-center gap-3">
-                <i className="fas fa-bookmark text-amber-500"></i>
-                <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-zinc-900'}`}>Gespeicherte Jobs</h2>
-                <span className={`text-sm font-bold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>({savedJobs.length})</span>
-              </div>
+          <div>
+            <div className="saved-header">
+              <span className="saved-header__icon"><i className="fas fa-bookmark"></i></span>
+              <h2>Deine Merkliste</h2>
+              <span className="results-count">{savedJobs.length} gespeichert</span>
             </div>
-            <div className="space-y-3">
+            <div className="job-list">
               {savedJobs.map((job) => (
                 <JobCard key={job.url} job={job} darkMode={darkMode} isSaved={true} onToggleSave={toggleSaveJob} />
               ))}
@@ -656,147 +694,114 @@ const App: React.FC = () => {
         )}
 
         {showSavedJobs && savedJobs.length === 0 && (
-          <div className={`rounded-lg border py-16 text-center ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-            <i className="fas fa-bookmark text-4xl text-zinc-300 mb-4"></i>
-            <p className={`font-bold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Keine gespeicherten Jobs vorhanden</p>
-            <p className={`text-sm mt-2 ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>Speichere Jobs mit dem Lesezeichen-Button</p>
+          <div className="saved-empty">
+            <i className="fas fa-bookmark"></i>
+            <strong>Deine Merkliste wartet auf den ersten Treffer.</strong>
+            <p>Speichere passende Stellen mit dem Lesezeichen.</p>
           </div>
         )}
 
         {/* Loading */}
-        {loading && (
-          <div className={`rounded-lg border py-20 text-center ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-            <div className={`mx-auto mb-6 flex h-16 w-16 animate-pulse items-center justify-center rounded-lg ${darkMode ? 'bg-zinc-700 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
-               <i className="fas fa-binoculars text-2xl"></i>
-            </div>
-            <h3 className={`mb-2 text-xl font-black ${darkMode ? 'text-white' : 'text-zinc-900'}`}>Wir scannen die Jobbörsen...</h3>
-            <p className={`font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Suche nach "{activeQuery}" in {activeLocation}</p>
+        {loading && !showSavedJobs && (
+          <div className="loading-card">
+            <div className="loading-card__icon"><i className="fas fa-compass fa-spin"></i></div>
+            <h3>Wir schauen uns für dich um.</h3>
+            <p>Suche nach „{activeQuery}“ in {activeLocation}</p>
           </div>
         )}
 
         {/* Error */}
-        {error && !loading && (
-          <div className={`max-w-2xl mx-auto border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex items-start gap-4 sm:p-6 ${darkMode ? 'bg-zinc-800' : 'bg-white'}`}>
-            <div className={`bg-red-100 p-2 rounded-lg text-red-600 shrink-0 dark:bg-red-900 dark:text-red-400`}>
-               <i className="fas fa-bug"></i>
-            </div>
-            <div>
-               <h3 className="font-bold text-slate-800">Keine Ergebnisse</h3>
-               <p className="text-slate-600 mt-1">{error}</p>
-            </div>
+        {error && !loading && !showSavedJobs && (
+          <div className="notice-card" role="status">
+            <i className="fas fa-circle-info"></i>
+            <p>{error}</p>
           </div>
         )}
 
         {/* Results */}
-        {jobs.length > 0 && !loading && (
-          <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:gap-6">
-            <aside className="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
-              <div className={`rounded-lg border p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-                <p className={`mb-3 text-xs font-black uppercase tracking-widest ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Portale</p>
-                <div className="space-y-2">
+        {jobs.length > 0 && !loading && !showSavedJobs && (
+          <div className="results-layout">
+            <aside className="results-sidebar">
+              <div className="sidebar-panel">
+                <p className="sidebar-title">Quellen filtern</p>
+                <div className="source-list">
                   {sourceOptions.map((source) => (
                     <button
                       key={source}
                       onClick={() => handleSourceFilterChange(source)}
-                      className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-black transition-colors ${
-                        selectedSource === source
-                          ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : darkMode
-                            ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-emerald-400 hover:text-emerald-700'
-                            : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
-                      }`}
+                      className={`source-filter ${selectedSource === source ? 'is-active' : ''}`}
+                      aria-pressed={selectedSource === source}
                     >
                       <span>{source}</span>
-                      <span className="text-xs opacity-80">{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
+                      <span className="source-filter__count">{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className={`rounded-lg border p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-                <p className={`mb-2 text-xs font-black uppercase tracking-widest ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Aktive Suche</p>
-                <p className={`text-sm font-black ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{activeQuery}</p>
-                <p className={`mt-1 text-sm font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{activeLocation}</p>
+              <div className="sidebar-panel active-search">
+                <p className="sidebar-title">Deine Suche</p>
+                <p className="active-search__query">{activeQuery}</p>
+                <p className="active-search__location"><i className="fas fa-location-dot"></i> {activeLocation}</p>
               </div>
             </aside>
 
-            <section className="space-y-4 sm:space-y-5">
-              <div className={`rounded-lg border p-3 sm:p-4 ${darkMode ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-white'}`}>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h2 className={`flex items-center gap-2 text-lg font-black sm:text-xl ${darkMode ? 'text-white' : 'text-zinc-900'}`}>
-                      <i className="fas fa-fire text-orange-500"></i>
-                      Top Chancen
-                    </h2>
-                    <p className={`mt-1 text-sm font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{summary}</p>
-                  </div>
-                  <span className={`w-fit rounded-lg border border-emerald-200 px-3 py-2 text-xs font-black ${darkMode ? 'bg-emerald-900 border-emerald-800 text-emerald-200' : 'bg-emerald-50 text-emerald-700'}`}>
-                    {filteredJobs.length} von {jobs.length} Angebote
-                  </span>
-                </div>
-              </div>
-
-              <div className="lg:hidden">
-                <p className={`mb-2 text-xs font-black uppercase tracking-widest ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Portale</p>
-                <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+            <section className="results-main">
+              <div className="mobile-sources">
+                <p className="mobile-sources__title">Quellen</p>
+                <div className="mobile-sources__list">
                   {sourceOptions.map((source) => (
                     <button
                       key={source}
                       onClick={() => handleSourceFilterChange(source)}
-                      className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition-colors min-h-[48px] ${
-                        selectedSource === source
-                          ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : darkMode
-                            ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-emerald-400 hover:text-emerald-700'
-                            : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700'
-                      }`}
+                      className={`mobile-source-filter ${selectedSource === source ? 'is-active' : ''}`}
+                      aria-pressed={selectedSource === source}
                     >
-                      <span>{source}</span>
-                      <span className="text-xs opacity-80">{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
+                      {source}<span>{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
+              <div className="results-heading">
+                <div>
+                  <p className="results-heading__eyebrow">Deine Möglichkeiten</p>
+                  <h2>Passende Chancen</h2>
+                  <p className="results-summary">{summary}</p>
+                </div>
+                <div className="results-count"><strong>{filteredJobs.length}</strong> von {jobs.length} Treffern</div>
+              </div>
+
+
               {!selectedSourceStillAvailable && (
-                <div className={`rounded-lg border p-5 text-sm font-bold ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300' : 'border-zinc-200 bg-white text-zinc-600'}`}>
+                <div className="filter-notice">
                   Für {selectedSource} sind in den aktuell geladenen Treffern keine Angebote mehr vorhanden.
                 </div>
               )}
 
               {filteredJobs.length > 0 ? (
-                <div className="space-y-3">
+                <div className="job-list">
                   {filteredJobs.map((job) => (
                     <JobCard key={job.id} job={job} darkMode={darkMode} isSaved={savedJobs.some(j => j.url === job.url)} onToggleSave={toggleSaveJob} />
                   ))}
                 </div>
               ) : selectedSourceStillAvailable ? (
-                <div className={`rounded-lg border p-5 text-sm font-bold ${darkMode ? 'border-zinc-700 bg-zinc-800 text-zinc-300' : 'border-zinc-200 bg-white text-zinc-600'}`}>
+                <div className="filter-notice">
                   Für {selectedSource} sind in den geladenen Treffern gerade keine Angebote sichtbar.
                 </div>
               ) : null}
 
-              <div className="flex flex-col items-center justify-center py-8">
+              <div className="load-more-wrap">
                 <button
-onClick={handleLoadMore}
+                  onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className={`inline-flex items-center gap-3 rounded-lg border px-8 py-4 font-bold shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50 min-h-[56px] text-base ${
-                    darkMode
-                      ? 'border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700'
-                      : 'border-zinc-200 bg-white text-zinc-800'
-                  }`}
+                  className="load-more-button"
                 >
-                  {loadingMore ? (
-                    <i className="fas fa-circle-notch fa-spin text-emerald-600"></i>
-                  ) : (
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-md ${darkMode ? 'bg-emerald-900 text-emerald-200' : 'bg-emerald-50 text-emerald-700'}`}>
-                      <i className="fas fa-plus"></i>
-                    </span>
-                  )}
+                  <i className={`fas ${loadingMore ? 'fa-circle-notch fa-spin' : 'fa-plus'}`}></i>
                   <span>Weitere Chancen anzeigen</span>
                 </button>
                 {loadMoreNotice && (
-                  <p className={`mt-4 max-w-md text-center text-sm font-bold ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  <p className="load-more-notice">
                     {loadMoreNotice}
                   </p>
                 )}
@@ -806,20 +811,32 @@ onClick={handleLoadMore}
         )}
 
         {/* Empty State / Intro */}
-        {!hasSearched && !loading && (
-           <div className={`text-center py-20 ${darkMode ? 'opacity-60' : 'opacity-50'}`}>
-               <i className={`fas fa-arrow-up text-4xl ${darkMode ? 'text-zinc-600' : 'text-slate-300'} animate-bounce mb-4`}></i>
-               <p className={darkMode ? 'text-zinc-500' : 'text-slate-400'}>Wähle eine Kategorie oder starte eine Suche</p>
-           </div>
+        {!hasSearched && !loading && !showSavedJobs && (
+          <section className="empty-state">
+            <div className="empty-state__art" aria-hidden="true">
+              <svg viewBox="0 0 120 120" fill="none">
+                <circle cx="60" cy="60" r="46" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 5" />
+                <path d="m23 77 25-35 13 18 8-11 29 39H22l1-11Z" fill="currentColor" opacity=".18" />
+                <path d="m29 82 19-27 13 18 8-11 22 30H29v-10Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                <path d="M43 91h37M58 77l3 5 6-1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="83" cy="35" r="5" fill="#d47750" />
+              </svg>
+            </div>
+            <div>
+              <p className="empty-state__eyebrow">Dein nächster Schritt</p>
+              <h2>Dein Neustart beginnt hier.</h2>
+              <p>Starte mit einem Beruf oder Stichwort. Wir suchen nach passenden Teilzeitstellen in Tirol, die zu Connies Plänen passen.</p>
+            </div>
+          </section>
         )}
 
         {/* Sources */}
-        {sources.length > 0 && !loading && (
-           <div className="mt-16 text-center">
-             <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${darkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Quellen der Suche</p>
-             <div className={`flex flex-wrap justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity ${darkMode ? 'opacity-40 hover:opacity-80' : ''}`}>
+        {sources.length > 0 && !loading && !showSavedJobs && (
+           <div className="source-attribution">
+             <p className="source-attribution__label">Quellen der Suche</p>
+             <div className="source-attribution__links">
                {sources.map((s, i) => (
-                 <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className={`text-[10px] hover:text-emerald-600 bg-white border px-2 py-1 rounded hover:border-emerald-300 transition-colors truncate max-w-[150px] ${darkMode ? 'text-zinc-400 border-zinc-700 bg-zinc-800' : 'text-slate-500 border-slate-200'}`}>
+                 <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer">
                    {s.title}
                  </a>
                ))}
