@@ -1,114 +1,103 @@
-import { decodeHtml, slugify, stripTags, uniqueByUrl } from './utils.js';
+import { extractMaxWeeklyHours, slugify, stripTags, uniqueByUrl } from './utils.js';
 
 const BASE_URL = 'https://www.tirolerjobs.at';
-const SITEMAP_URL = `${BASE_URL}/sitemap.jobs.xml`;
-const PAGE_SIZE = 10;
-const IGNORED_TERMS = new Set(['job', 'jobs', 'tirol', 'innsbruck']);
+const PAGE_SIZE = 30;
 
-function getTerms(value = '') {
-  return slugify(value)
-    .split('-')
-    .filter((term) => term.length > 2 && !IGNORED_TERMS.has(term));
-}
+function buildSearchUrl({ query, location, page = 0 }) {
+  const querySlug = slugify(query || 'Teilzeit') || 'teilzeit';
+  const locationSlug = slugify(location || 'Tirol');
+  const path = `/jobs/${querySlug}${locationSlug && locationSlug !== 'tirol' ? `/${locationSlug}` : ''}`;
+  const url = new URL(path, BASE_URL);
 
-async function fetchText(url) {
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'text/html,application/xhtml+xml,application/xml',
-      'User-Agent': 'TirolNeustartBot/0.1 (+https://github.com/Deathcrusher/TirolNeustart)',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`tirolerjobs.at scraper failed: ${response.status}`);
+  if (page > 0) {
+    url.searchParams.set('page', String(page + 1));
   }
 
-  return response.text();
+  return url.toString();
 }
 
-function extractJobUrls(xml) {
-  return [...xml.matchAll(/<loc>(https:\/\/www\.tirolerjobs\.at\/jobs\/[^<]+)<\/loc>/g)]
-    .map((match) => decodeHtml(match[1]))
-    .filter(Boolean);
+function extractFirst(value, pattern) {
+  const match = value.match(pattern);
+  return match ? stripTags(match[1] || '') : '';
 }
 
-function scoreUrl(url, input) {
-  const queryTerms = getTerms(input.query);
-  if (queryTerms.length === 0) return 1;
-
-  const slug = slugify(decodeURIComponent(url));
-  return queryTerms.reduce((score, term) => score + (slug.includes(term) ? 1 : 0), 0);
+function extractRaw(value, pattern) {
+  return value.match(pattern)?.[1] || '';
 }
 
-function extractJobPosting(html) {
-  const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/g)];
-
-  for (const script of scripts) {
-    for (const candidate of [script[1], decodeHtml(script[1])]) {
-      try {
-        const data = JSON.parse(candidate.trim());
-        const items = Array.isArray(data) ? data : [data];
-        const posting = items.find((item) => item?.['@type'] === 'JobPosting');
-        if (posting) return posting;
-      } catch {
-        // Ignore malformed structured data from a single detail page.
-      }
-    }
-  }
-
-  return null;
+function extractAttribute(value, attribute) {
+  return value.match(new RegExp(`\\b${attribute}=["']([^"']*)["']`, 'i'))?.[1] || '';
 }
 
-function firstAddress(jobLocation) {
-  const location = Array.isArray(jobLocation) ? jobLocation[0] : jobLocation;
-  return location?.address || {};
-}
+function parseJobs(html, input) {
+  const headings = [...html.matchAll(/<h2\b[^>]*class=["'][^"']*m-results__title[^"']*["'][^>]*>([\s\S]*?)<\/h2>/gi)];
 
-function normalizePosting(posting, fallbackUrl, fallbackLocation) {
-  if (!posting) return null;
+  const jobs = headings.map((heading, index) => {
+    const titleLink = heading[1].match(/<a\b([^>]*)>([\s\S]*?)<\/a>/i);
+    if (!titleLink) return null;
 
-  const title = stripTags(posting.title || '');
-  const url = posting.url || fallbackUrl;
-  if (!title || !url) return null;
+    const url = extractAttribute(titleLink[1], 'href');
+    const title = stripTags(extractAttribute(titleLink[1], 'title') || titleLink[2]);
+    if (!url || !title) return null;
 
-  const address = firstAddress(posting.jobLocation);
-  const locality = stripTags(address.addressLocality || '');
-  const postalCode = stripTags(address.postalCode || '');
-  const company = stripTags(posting.hiringOrganization?.name || 'Unbekannt');
-  const id = url.split(',').pop() || slugify(`${title}-${company}`);
+    const nextHeading = headings[index + 1];
+    const itemHtml = html.slice(heading.index, nextHeading?.index ?? html.length);
+    const companyHtml = extractRaw(itemHtml, /<div[^>]+class=["'][^"']*m-results__company[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+    const companyLink = companyHtml.match(/<a\b([^>]*)>([\s\S]*?)<\/a>/i);
+    const company = companyLink
+      ? stripTags(extractAttribute(companyLink[1], 'title') || companyLink[2])
+      : stripTags(companyHtml);
+    const locationAndDate = extractFirst(itemHtml, /<div[^>]+class=["'][^"']*m-results__meta[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+    const dateMatch = locationAndDate.match(/\b\d{1,2}\.\d{1,2}\.\d{4}\b/);
+    const date = dateMatch?.[0] || 'Aktuell';
+    const location = (dateMatch ? locationAndDate.replace(dateMatch[0], '') : locationAndDate).trim()
+      || input.location
+      || 'Tirol';
+    const category = extractFirst(itemHtml, /<span[^>]+class=["'][^"']*m-results__category[^"']*["'][^>]*>([\s\S]*?)<\/span>/i);
+    const details = extractFirst(itemHtml, /<details[^>]+class=["'][^"']*m-results__details[^"']*["'][^>]*>([\s\S]*?)<\/details>/i);
+    const snippet = details.replace(/Zum Stellenangebot/gi, '').slice(0, 280) || category || 'Details im Inserat';
+    const absoluteUrl = new URL(url, BASE_URL).toString();
 
-  return {
-    id: `tirolerjobs-${id}`,
-    title,
-    company,
-    location: [postalCode, locality].filter(Boolean).join(' ') || fallbackLocation || 'Tirol',
-    snippet: stripTags(posting.description || 'Details im Inserat').slice(0, 260),
-    url,
-    source: 'tirolerjobs.at',
-    date: posting.datePosted ? String(posting.datePosted).split(' ')[0] : 'Aktuell',
-    category: stripTags(posting.industry || 'Jobportal'),
-  };
+    const pathname = new URL(absoluteUrl).pathname;
+    return {
+      id: `tirolerjobs-${pathname.split(',').pop() || slugify(title)}`,
+      title,
+      company: company || 'Unbekannt',
+      location,
+      snippet,
+      url: absoluteUrl,
+      source: 'tirolerjobs.at',
+      date,
+      category: category || 'Jobportal',
+      maxWeeklyHours: extractMaxWeeklyHours(`${title} ${snippet}`),
+    };
+  }).filter(Boolean);
+
+  return uniqueByUrl(jobs).slice(0, PAGE_SIZE);
 }
 
 export const tirolerJobsSource = {
   id: 'tirolerjobs',
   label: 'tirolerjobs.at',
   async search(input) {
-    const xml = await fetchText(SITEMAP_URL);
-    const ranked = extractJobUrls(xml)
-      .map((url) => ({ url, score: scoreUrl(url, input) }))
-      .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score);
+    const url = buildSearchUrl(input);
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml',
+        'User-Agent': 'TirolNeustartBot/0.1 (+https://github.com/Deathcrusher/TirolNeustart)',
+      },
+      signal: AbortSignal.timeout(7000),
+    });
 
-    const start = (input.page || 0) * PAGE_SIZE;
-    const candidates = ranked.slice(start, start + PAGE_SIZE);
-    const settled = await Promise.allSettled(
-      candidates.map(async ({ url }) => normalizePosting(extractJobPosting(await fetchText(url)), url, input.location))
-    );
+    if (!response.ok) {
+      throw new Error(`tirolerjobs.at scraper failed: ${response.status}`);
+    }
 
-    return uniqueByUrl(settled
-      .filter((result) => result.status === 'fulfilled')
-      .map((result) => result.value)
-      .filter(Boolean));
+    const html = await response.text();
+    const jobs = parseJobs(html, input);
+    if (jobs.length === 0) {
+      throw new Error('tirolerjobs.at returned no readable job cards.');
+    }
+    return jobs;
   },
 };

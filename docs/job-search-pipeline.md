@@ -2,25 +2,26 @@
 
 ## Goal
 
-TirolNeustart combines structured job sources with a separate AI search path for fresh listings:
+TirolNeustart combines structured job sources with GPT-6 Luna web search for fresh listings:
 
-1. Fetch jobs from APIs and scraper actors.
-2. Normalize all results into one shared shape.
-3. Cache/store the normalized jobs.
-4. Search the cached data quickly from the app.
-5. Use GPT-6 Luna with web search for fresh listings and summaries when AI search is selected.
+1. Fetch current results from the configured job portals.
+2. Normalize and deduplicate the listings.
+3. Combine direct portal results with GPT-6 Luna web-search results in the default search mode.
+4. Return results to the app; no persistent job cache is configured yet.
+5. Use the separate fast mode to combine portal results with Jooble when a key is configured.
 
 ## Candidate Architecture
 
 ```text
 React App
-  -> /api/search-jobs
-    -> Jooble API
-    -> Apify actors
-    -> other job APIs/scrapers
-    -> cache / database
+  -> /api/ai-search (default)
+    -> GPT-6 Luna web search
+    -> direct portal adapters
     -> dedupe / ranking
-    -> GPT-6 Luna web search when requested
+  -> /api/search-jobs (fast mode)
+    -> Jooble API
+    -> direct portal adapters
+    -> dedupe / ranking
 ```
 
 For the detailed custom scraping plan, see `docs/scraper-strategy.md`.
@@ -41,7 +42,7 @@ Useful targets:
 
 ## GPT-6 Luna Role
 
-GPT-6 Luna is called through the server-side Vercel route and should:
+GPT-6 Luna is called through the server-side Vercel route alongside direct portal adapters and should:
 
 - search for direct, current job listings
 - prioritize Connie's preferences: up to 20 hours per week, no Saturday work, Friday only until noon, and remote work preferred
@@ -59,8 +60,8 @@ Live scraping every user search will stay slow and brittle. Better:
 
 ## Migration Plan
 
-1. Keep the scraper/Jooble search path for fast results.
-2. Keep GPT-6 Luna behind `/api/ai-search` with `OPENAI_API_KEY` stored in Vercel.
+1. Keep the scraper/Jooble search path available for fast results.
+2. Keep GPT-6 Luna behind `/api/ai-search` with `OPENAI_API_KEY` stored in Vercel; the default mode also fetches portal results.
 3. Move any future provider credentials out of React and behind server routes.
 4. Add more structured job sources as needed.
 5. Normalize and dedupe results across sources.

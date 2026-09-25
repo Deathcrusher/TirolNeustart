@@ -4,7 +4,7 @@ import { joobleService } from './joobleService';
 function isClearlyRemote(job: { title?: string; location?: string; snippet?: string; workMode?: string }): boolean {
   const text = [job.workMode, job.title, job.location, job.snippet].filter(Boolean).join(' ').toLowerCase();
   if (/hybrid|home[ -]?office\s+(?:möglich|option|anteilig)|mobiles arbeiten\s+möglich/.test(text)) return false;
-  return /\bremote\b|home[ -]?office|ortsunabhängig|fully remote|100\s*%\s*(?:remote|homeoffice)/.test(text);
+  return /(?:vollständig|ausschließlich|full(?:y)?)\s*(?:remote|home[ -]?office)|100\s*%\s*(?:remote|home[ -]?office)|ortsunabhängig/.test(text);
 }
 
 class JobSearchService {

@@ -46,6 +46,39 @@ export function slugify(value = '') {
     .replace(/^-+|-+$/g, '');
 }
 
+const GENERIC_SEARCH_TERMS = new Set([
+  'job', 'jobs', 'jobangebot', 'jobangebote', 'stelle', 'stellen', 'stellenangebot', 'stellenangebote',
+  'arbeitsplatz', 'arbeitsplatze', 'arbeitsplaetze', 'arbeit', 'suche', 'finden', 'osterreich', 'oesterreich', 'tirol',
+  'in', 'im', 'am', 'mit', 'und', 'als', 'fuer', 'fur',
+]);
+
+export function simplifyJobQuery(query = '', location = 'Tirol') {
+  const locationTerms = new Set(slugify(location).split('-').filter(Boolean));
+  locationTerms.add('tirol');
+  const queryTerms = String(query).normalize('NFKC').match(/[\p{L}\p{N}]+/gu) || [];
+  const terms = queryTerms.filter((term) => {
+    const normalizedTerm = slugify(term);
+    return normalizedTerm && !GENERIC_SEARCH_TERMS.has(normalizedTerm) && !locationTerms.has(normalizedTerm);
+  });
+
+  return terms.join(' ') || 'Teilzeit';
+}
+
+export function extractMaxWeeklyHours(value = '') {
+  const text = String(value).replace(/\u00a0/g, ' ');
+  const number = '(\\d{1,2}(?:[.,]\\d+)?)';
+  const unit = '(?:wochenstunden|wochenstd\\.?|wst\\.?|stunden(?:\\s+pro\\s+woche)?|std\\.?|h(?:\\s*\\/\\s*woche)?)';
+  const range = text.match(new RegExp(`${number}\\s*(?:-|–|—|bis)\\s*${number}\\s*${unit}`, 'i'));
+  if (range) return Number(range[2].replace(',', '.'));
+
+  const exact = text.match(new RegExp(`${number}\\s*${unit}`, 'i'));
+  if (!exact) return undefined;
+
+  const prefix = text.slice(0, exact.index).trimEnd();
+  if (/\b(?:ab|mindestens)\s*$/i.test(prefix)) return undefined;
+  return Number(exact[1].replace(',', '.'));
+}
+
 export function uniqueByUrl(jobs) {
   const seen = new Set();
   return jobs.filter((job) => {

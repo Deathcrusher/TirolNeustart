@@ -1,12 +1,14 @@
 import { requireAuth } from '../lib/auth.js';
 import { searchCustomSources } from '../server/jobSources/index.js';
 import { dedupeJobs } from '../server/jobs/dedupe.js';
+import { extractMaxWeeklyHours, simplifyJobQuery } from '../server/jobSources/utils.js';
 
 const JOOBLE_BASE_URL = 'https://jooble.org/api';
-const RESULTS_PER_PAGE = 30;
+const RESULTS_PER_PAGE = 45;
 const SOURCE_URIS = {
   'jobs.tt.com': 'https://jobs.tt.com/job',
   'tirolerjobs.at': 'https://www.tirolerjobs.at/jobs',
+  'jobs.at': 'https://www.jobs.at/j/teilzeit/tirol',
   'hokify.at': 'https://hokify.at/jobs',
   'ÖH Jobbörse': 'https://schwarzesbrett.oeh.ac.at/jobs/',
   'StepStone AT': 'https://www.stepstone.at/jobs',
@@ -36,8 +38,9 @@ function classifyWorkMode(job = {}) {
     job.description,
   ].filter(Boolean).join(' ').toLowerCase();
 
-  if (/hybrid|home[ -]?office\s+(?:möglich|option|anteilig)|mobiles arbeiten\s+möglich/.test(text)) return 'hybrid';
-  if (/\bremote\b|home[ -]?office|ortsunabhängig|fully remote|100\s*%\s*(?:remote|homeoffice)/.test(text)) return 'remote';
+  if (/\bhybrid\b|home[ -]?office\s+(?:möglich|option|anteilig)|mobiles arbeiten\s+möglich/.test(text)) return 'hybrid';
+  if (/(?:vollständig|ausschließlich|full(?:y)?)\s*(?:remote|home[ -]?office)|100\s*%\s*(?:remote|home[ -]?office)|ortsunabhängig/.test(text)) return 'remote';
+  if (/\bremote\b|home[ -]?office/.test(text)) return 'unklar';
   if (/vor ort|onsite|on-site|präsenzpflicht/.test(text)) return 'vor Ort';
   return 'unklar';
 }
@@ -122,10 +125,10 @@ export default async function handler(request, response) {
 
   const cleanedQuery = String(query).trim();
   const cleanedLocation = String(location).trim() || 'Tirol';
+  const normalizedQuery = simplifyJobQuery(cleanedQuery, cleanedLocation);
   const numericPage = Number.isFinite(Number(page)) ? Math.max(0, Number(page)) : 0;
   const cleanedSourceFilter = String(sourceFilter || '').trim();
   const cleanedRemoteOnly = remoteOnly === true;
-  const sourceQuery = cleanedRemoteOnly ? `${cleanedQuery} Remote Homeoffice` : cleanedQuery;
 
   if (!cleanedQuery) {
     response.status(400).json({ error: 'Missing query' });
@@ -134,14 +137,14 @@ export default async function handler(request, response) {
 
   const [customResult, joobleResult] = await Promise.allSettled([
     searchCustomSources({
-      query: sourceQuery,
+      query: cleanedQuery,
       location: cleanedLocation,
       page: numericPage,
       sourceFilter: cleanedSourceFilter,
     }),
     cleanedSourceFilter && cleanedSourceFilter !== 'Jooble' ? Promise.resolve([]) : fetchJooble({
       apiKey: String(joobleApiKey || '').trim(),
-      query: cleanedQuery,
+      query: normalizedQuery,
       location: cleanedLocation,
       page: numericPage,
       remoteOnly: cleanedRemoteOnly,
@@ -149,7 +152,13 @@ export default async function handler(request, response) {
   ]);
 
   const customJobs = customResult.status === 'fulfilled'
-    ? customResult.value.jobs.map((job) => ({ ...job, workMode: job.workMode || classifyWorkMode(job) }))
+    ? customResult.value.jobs.map((job) => ({
+      ...job,
+      maxWeeklyHours: Number.isFinite(job.maxWeeklyHours)
+        ? job.maxWeeklyHours
+        : extractMaxWeeklyHours([job.title, job.snippet].filter(Boolean).join(' ')) ?? null,
+      workMode: job.workMode || classifyWorkMode(job),
+    }))
     : [];
   const joobleJobs = joobleResult.status === 'fulfilled' ? joobleResult.value : [];
   const errors = [

@@ -211,7 +211,7 @@ const App: React.FC = () => {
       setCurrentPage(0);
       setSummary(data.summary);
       setSources(data.groundingSources);
-      setSearchWarnings(useFastSearch ? data.warnings || [] : []);
+      setSearchWarnings(data.warnings || []);
       if (data.jobs.length === 0) {
         setError(useFastSearch && data.warnings?.length
           ? 'Die Jobportale haben gerade keine verwertbaren Treffer geliefert. Prüfe den Quellenstatus unten.'

@@ -1,14 +1,17 @@
 import { hokifyAtSource } from './hokifyAt.js';
+import { jobsAtSource } from './jobsAt.js';
 import { jobsTtSource } from './jobsTt.js';
 import { karriereAtSource } from './karriereAt.js';
 import { metajobSource } from './metajob.js';
 import { oehJobboerseSource } from './oehJobboerse.js';
 import { stepstoneAtSource } from './stepstoneAt.js';
 import { tirolerJobsSource } from './tirolerJobs.js';
+import { simplifyJobQuery } from './utils.js';
 
 const SOURCES = [
   jobsTtSource,
   tirolerJobsSource,
+  jobsAtSource,
   hokifyAtSource,
   oehJobboerseSource,
   stepstoneAtSource,
@@ -16,11 +19,14 @@ const SOURCES = [
   metajobSource,
 ];
 
-const DEFAULT_SOURCE_TIMEOUT_MS = 3500;
+const DEFAULT_SOURCE_TIMEOUT_MS = 5000;
 
 function withTimeout(promise, label) {
   let timeoutId;
-  const timeoutMs = label === 'StepStone AT' ? 5000 : DEFAULT_SOURCE_TIMEOUT_MS;
+  const timeoutMs = label === 'StepStone AT' ? 5500
+    : label === 'tirolerjobs.at' ? 7500
+      : label === 'jobs.at' ? 7000
+        : DEFAULT_SOURCE_TIMEOUT_MS;
   const timeout = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error(`${label} scraper timed out.`));
@@ -32,6 +38,10 @@ function withTimeout(promise, label) {
 
 export async function searchCustomSources(input) {
   const requestedSource = String(input.sourceFilter || '').trim();
+  const sourceInput = {
+    ...input,
+    query: simplifyJobQuery(input.query, input.location),
+  };
   const activeSources = requestedSource
     ? SOURCES.filter((source) => source.label === requestedSource)
     : SOURCES;
@@ -39,7 +49,7 @@ export async function searchCustomSources(input) {
   const settled = await Promise.allSettled(
     activeSources.map((source) =>
       withTimeout(
-        source.search(input).then((jobs) => ({
+        source.search(sourceInput).then((jobs) => ({
           source: source.id,
           jobs,
         })),

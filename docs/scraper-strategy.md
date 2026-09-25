@@ -199,7 +199,8 @@ The first implementation step now exists:
 
 - `/api/search-jobs.js` aggregates provider results.
 - `server/jobSources/jobsTt.js` adds TT Jobs through its server-rendered search result page.
-- `server/jobSources/tirolerJobs.js` adds tirolerjobs.at through its job sitemap and JobPosting detail pages.
+- `server/jobSources/tirolerJobs.js` adds tirolerjobs.at through its native, paginated search result pages.
+- `server/jobSources/jobsAt.js` adds jobs.at through its server-rendered search result cards; its first page contains up to 15 readable listings.
 - `server/jobSources/hokifyAt.js` adds hokify.at through its server-rendered search result page.
 - `server/jobSources/oehJobboerse.js` adds the ÖH Schwarzes Brett job board through its server-rendered search result page.
 - `server/jobSources/stepstoneAt.js` adds StepStone AT through its server-rendered SEO result page.
@@ -209,6 +210,7 @@ The first implementation step now exists:
 - `server/jobSources/index.js` is the source registry.
 - `server/jobs/dedupe.js` removes duplicate jobs before returning results.
 - `services/jobSearchService.ts` lets the frontend call the backend aggregator and fall back to Jooble in local/dev environments.
+- The default GPT search also combines up to 30 direct portal results with its GPT-6 Luna web-search results, so the source adapters are used in both search modes.
 
 The current custom scraper is intentionally small. It proves the adapter pattern and can be extended source by source.
 

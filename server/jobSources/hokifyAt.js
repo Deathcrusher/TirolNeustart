@@ -106,11 +106,18 @@ export const hokifyAtSource = {
       },
     });
 
+    if (response.status === 202) {
+      throw new Error('hokify.at did not return its listings (HTTP 202 challenge response).');
+    }
+
     if (!response.ok) {
       throw new Error(`hokify.at scraper failed: ${response.status}`);
     }
 
     const html = await response.text();
+    if (!html.trim()) {
+      throw new Error('hokify.at returned an empty page instead of job listings.');
+    }
     return parseJobs(html, url, input.location);
   },
 };
