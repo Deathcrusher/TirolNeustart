@@ -31,7 +31,7 @@ const normalizeSourceLabel = (source: string) => {
 const SOURCE_FILTER_BLOCKLIST = new Set(['willhaben Jobs', 'AMS alle jobs', 'Indeed AT']);
 
 const App: React.FC = () => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState('Quereinsteiger Jobs Tirol');
   const [activeQuery, setActiveQuery] = useState('Quereinsteiger Jobs Tirol');
   const [location, setLocation] = useState('Tirol');
   const [activeLocation, setActiveLocation] = useState('Tirol');
@@ -633,8 +633,9 @@ const App: React.FC = () => {
               </select>
             </label>
 
-            <button type="submit" className="search-submit">
-              Suchen <i className="fas fa-arrow-right" aria-hidden="true"></i>
+            <button type="submit" className="search-submit" disabled={loading} aria-busy={loading}>
+              {loading ? 'Suche läuft …' : 'Suchen'}
+              <i className={`fas ${loading ? 'fa-circle-notch fa-spin' : 'fa-arrow-right'}`} aria-hidden="true"></i>
             </button>
           </form>
 

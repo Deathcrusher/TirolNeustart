@@ -17,8 +17,9 @@ class JobSearchService {
   }
 
   async searchJobs(query: string, location: string = 'Tirol', page: number = 0, sourceFilter: string = '', remoteOnly = false): Promise<SearchResult> {
+    let response: Response;
     try {
-      const response = await fetch('/api/search-jobs', {
+      response = await fetch('/api/search-jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,12 +33,6 @@ class JobSearchService {
           joobleApiKey: this.resolveJoobleApiKey(),
         }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Search API Error: ${response.status} ${response.statusText}`.trim());
-      }
-
-      return response.json();
     } catch (error) {
       console.warn('Falling back to direct Jooble service:', error);
       const jobs = await joobleService.searchJobs(query, location, page);
@@ -48,6 +43,13 @@ class JobSearchService {
         groundingSources: [],
       };
     }
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || `Search API Error: ${response.status} ${response.statusText}`.trim());
+    }
+
+    return result as SearchResult;
   }
 }
 
