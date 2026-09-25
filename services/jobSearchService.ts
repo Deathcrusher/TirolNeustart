@@ -41,6 +41,7 @@ class JobSearchService {
         jobs: filteredJobs,
         summary: `Jooble Ergebnisse für "${query}" in ${location}${remoteOnly ? ' (nur Remote)' : ''}:`,
         groundingSources: [],
+        warnings: ['Die eigene Portalabfrage war nicht erreichbar; die Treffer stammen aus dem Jooble-Fallback.'],
       };
     }
 

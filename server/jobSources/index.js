@@ -1,13 +1,10 @@
-import { amsAtSource } from './amsAt.js';
 import { hokifyAtSource } from './hokifyAt.js';
-import { indeedAtSource } from './indeedAt.js';
 import { jobsTtSource } from './jobsTt.js';
 import { karriereAtSource } from './karriereAt.js';
 import { metajobSource } from './metajob.js';
 import { oehJobboerseSource } from './oehJobboerse.js';
 import { stepstoneAtSource } from './stepstoneAt.js';
 import { tirolerJobsSource } from './tirolerJobs.js';
-import { willhabenJobsSource } from './willhabenJobs.js';
 
 const SOURCES = [
   jobsTtSource,
@@ -17,9 +14,6 @@ const SOURCES = [
   stepstoneAtSource,
   karriereAtSource,
   metajobSource,
-  willhabenJobsSource,
-  amsAtSource,
-  indeedAtSource,
 ];
 
 const DEFAULT_SOURCE_TIMEOUT_MS = 3500;

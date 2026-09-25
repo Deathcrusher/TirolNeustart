@@ -156,22 +156,26 @@ export default async function handler(request, response) {
     ...(customResult.status === 'fulfilled' ? customResult.value.errors : [customResult.reason?.message || String(customResult.reason)]),
     ...(joobleResult.status === 'rejected' ? [joobleResult.reason?.message || String(joobleResult.reason)] : []),
   ].filter(Boolean);
-  const sourceNames = [
-    ...(customResult.status === 'fulfilled' ? customResult.value.sources : ['Custom scrapers']),
-    ...(joobleJobs.length > 0 ? ['Jooble'] : []),
-  ];
   const matchingJobs = dedupeJobs([...customJobs, ...joobleJobs]).filter((job) =>
-    !cleanedRemoteOnly || job.workMode === 'remote'
+    (!cleanedRemoteOnly || job.workMode === 'remote') &&
+    !(Number.isFinite(job.maxWeeklyHours) && job.maxWeeklyHours > 20) &&
+    job.saturdayWork !== 'ja' &&
+    job.fridayAfternoonWork !== 'ja'
   );
   const jobs = diversifyBySource(matchingJobs, RESULTS_PER_PAGE);
+  const sourceNames = [...new Set(jobs.map((job) => sourceGroup(job.source)))];
+  const sourceSummary = sourceNames.length === 1 ? '1 Portal' : `${sourceNames.length} Portale`;
 
   response.status(200).json({
     jobs,
-    summary: `${jobs.length} Treffer aus ${sourceNames.join(', ') || 'eigenen Quellen'} für "${cleanedQuery}" in ${cleanedLocation}${cleanedRemoteOnly ? ' (nur Remote)' : ''}.`,
+    summary: jobs.length
+      ? `${jobs.length} Treffer aus ${sourceSummary} für "${cleanedQuery}" in ${cleanedLocation}${cleanedRemoteOnly ? ' · nur Remote' : ''}.`
+      : `Keine Treffer für "${cleanedQuery}" in ${cleanedLocation}${cleanedRemoteOnly ? ' · nur Remote' : ''}.`,
     groundingSources: sourceNames.map((source) => ({
       title: source,
       uri: SOURCE_URIS[source] || 'https://jooble.org',
     })),
+    warnings: errors.slice(0, 10),
     debug: {
       errors,
       customJobs: customJobs.length,

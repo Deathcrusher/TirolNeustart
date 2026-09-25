@@ -205,9 +205,7 @@ The first implementation step now exists:
 - `server/jobSources/stepstoneAt.js` adds StepStone AT through its server-rendered SEO result page.
 - `server/jobSources/karriereAt.js` is the first custom fetch-based scraper.
 - `server/jobSources/metajob.js` adds METAJob through its preloaded search state.
-- `server/jobSources/willhabenJobs.js` is registered defensively because willhaben.at disallows automated scraping without explicit permission.
-- `server/jobSources/amsAt.js` is registered defensively, but AMS alle jobs currently blocks unauthenticated server API requests.
-- `server/jobSources/indeedAt.js` is registered defensively, but Indeed currently blocks automated server fetches from this environment.
+- The Willhaben, AMS, and Indeed adapter files are not in the active registry: those sources block or disallow automated requests, so they are skipped instead of adding predictable timeouts and empty filters.
 - `server/jobSources/index.js` is the source registry.
 - `server/jobs/dedupe.js` removes duplicate jobs before returning results.
 - `services/jobSearchService.ts` lets the frontend call the backend aggregator and fall back to Jooble in local/dev environments.

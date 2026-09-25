@@ -25,6 +25,7 @@ export interface SearchResult {
   jobs: JobListing[];
   groundingSources: GroundingSource[];
   summary: string;
+  warnings?: string[];
 }
 
 export interface SearchOptions {

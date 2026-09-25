@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [summary, setSummary] = useState('');
   const [sources, setSources] = useState<GroundingSource[]>([]);
+  const [searchWarnings, setSearchWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +187,7 @@ const App: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setSearchWarnings([]);
     setLoadMoreNotice(null);
     setJobs([]);
     setCurrentPage(0);
@@ -209,8 +211,11 @@ const App: React.FC = () => {
       setCurrentPage(0);
       setSummary(data.summary);
       setSources(data.groundingSources);
+      setSearchWarnings(useFastSearch ? data.warnings || [] : []);
       if (data.jobs.length === 0) {
-        setError("Keine passenden Einstiegs-Jobs gefunden. Versuch es mal mit einer anderen Kategorie.");
+        setError(useFastSearch && data.warnings?.length
+          ? 'Die Jobportale haben gerade keine verwertbaren Treffer geliefert. Prüfe den Quellenstatus unten.'
+          : 'Keine passenden Stellen gefunden. Versuch es mit einem anderen Suchbegriff oder einer anderen Kategorie.');
       }
     } catch (err: any) {
       setError(getFriendlyError(err));
@@ -259,6 +264,7 @@ const App: React.FC = () => {
           return [...prev, ...newSources];
         });
       }
+      setSearchWarnings((prev) => [...new Set([...prev, ...(data?.warnings || [])])]);
     } catch (err: any) {
       console.error("Load more error", err);
       setError(getFriendlyError(err));
@@ -292,6 +298,7 @@ const App: React.FC = () => {
       } else {
         setLoadMoreNotice(`Bei ${source} wurden gerade keine zusätzlichen Treffer gefunden.`);
       }
+      setSearchWarnings((prev) => [...new Set([...prev, ...(data.warnings || [])])]);
     } catch (err: any) {
       setError(getFriendlyError(err));
     } finally {
@@ -315,10 +322,7 @@ const App: React.FC = () => {
   }, {});
   const sourceOptions = [
     'Alle',
-    ...Array.from(new Set([
-      ...Object.keys(sourceCounts),
-      ...sources.map((source) => normalizeSourceLabel(source.title)),
-    ])).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
+    ...Object.keys(sourceCounts).filter((source) => !SOURCE_FILTER_BLOCKLIST.has(source)),
   ];
   const filteredJobs = selectedSource === 'Alle'
     ? jobs
@@ -719,96 +723,86 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {searchWarnings.length > 0 && !loading && !showSavedJobs && (
+          <details className="source-status">
+            <summary>
+              <span className="source-status__icon"><i className="fas fa-triangle-exclamation" aria-hidden="true"></i></span>
+              <span>{searchWarnings.length} Suchabfrage{searchWarnings.length === 1 ? '' : 'n'} fehlgeschlagen</span>
+              <i className="fas fa-chevron-down source-status__chevron" aria-hidden="true"></i>
+            </summary>
+            <div className="source-status__details">
+              <p>Die angezeigten Treffer stammen aus erreichbaren Quellen. Fehlgeschlagene Abfragen:</p>
+              <ul>{searchWarnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>
+            </div>
+          </details>
+        )}
+
         {/* Results */}
         {jobs.length > 0 && !loading && !showSavedJobs && (
-          <div className="results-layout">
-            <aside className="results-sidebar">
-              <div className="sidebar-panel">
-                <p className="sidebar-title">Quellen filtern</p>
-                <div className="source-list">
+          <section className="results-section">
+            <header className="results-heading">
+              <div className="results-heading__copy">
+                <p className="results-heading__eyebrow">{useFastSearch ? 'Portalsuche' : 'GPT-6 Luna · Websuche'}</p>
+                <h2>{activeQuery}</h2>
+                <div className="results-context">
+                  <span><i className="fas fa-location-dot" aria-hidden="true"></i>{activeLocation}</span>
+                  {remoteOnly && <span><i className="fas fa-house-laptop" aria-hidden="true"></i>Nur Remote</span>}
+                </div>
+                <p className="results-summary">{summary}</p>
+              </div>
+              <div className="results-count-card" aria-live="polite">
+                <strong>{filteredJobs.length}</strong>
+                <span>Treffer</span>
+                <small>{selectedSource === 'Alle' ? 'insgesamt' : `bei ${selectedSource}`}</small>
+              </div>
+            </header>
+
+            {sourceOptions.length > 1 && (
+              <div className="source-toolbar">
+                <div className="source-toolbar__head">
+                  <div className="source-toolbar__heading" id="source-filter-label">
+                    <strong>Nach Quelle filtern</strong>
+                    <small>{sourceOptions.length - 1} Jobportale mit Treffern</small>
+                  </div>
+                </div>
+                <div className="source-filter-list" role="group" aria-labelledby="source-filter-label">
                   {sourceOptions.map((source) => (
                     <button
                       key={source}
                       onClick={() => handleSourceFilterChange(source)}
-                      className={`source-filter ${selectedSource === source ? 'is-active' : ''}`}
+                      className={`source-chip ${selectedSource === source ? 'is-active' : ''}`}
                       aria-pressed={selectedSource === source}
                     >
-                      <span>{source}</span>
-                      <span className="source-filter__count">{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
+                      <span>{source === 'Alle' ? 'Alle Treffer' : source}</span>
+                      <span className="source-chip__count">{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
                     </button>
                   ))}
                 </div>
               </div>
+            )}
 
-              <div className="sidebar-panel active-search">
-                <p className="sidebar-title">Deine Suche</p>
-                <p className="active-search__query">{activeQuery}</p>
-                <p className="active-search__location"><i className="fas fa-location-dot"></i> {activeLocation}</p>
+            {!selectedSourceStillAvailable && (
+              <div className="filter-notice">Für {selectedSource} sind in den aktuellen Treffern keine Stellen vorhanden.</div>
+            )}
+
+            {filteredJobs.length > 0 ? (
+              <div className="job-list">
+                {filteredJobs.map((job) => (
+                  <JobCard key={job.id} job={job} darkMode={darkMode} isSaved={savedJobs.some(j => j.url === job.url)} onToggleSave={toggleSaveJob} />
+                ))}
               </div>
-            </aside>
+            ) : selectedSourceStillAvailable ? (
+              <div className="filter-notice">Für {selectedSource} sind in den geladenen Treffern keine Stellen sichtbar.</div>
+            ) : null}
 
-            <section className="results-main">
-              <div className="mobile-sources">
-                <p className="mobile-sources__title">Quellen</p>
-                <div className="mobile-sources__list">
-                  {sourceOptions.map((source) => (
-                    <button
-                      key={source}
-                      onClick={() => handleSourceFilterChange(source)}
-                      className={`mobile-source-filter ${selectedSource === source ? 'is-active' : ''}`}
-                      aria-pressed={selectedSource === source}
-                    >
-                      {source}<span>{source === 'Alle' ? jobs.length : sourceCounts[source] || 0}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="results-heading">
-                <div>
-                  <p className="results-heading__eyebrow">Deine Möglichkeiten</p>
-                  <h2>Passende Chancen</h2>
-                  <p className="results-summary">{summary}</p>
-                </div>
-                <div className="results-count"><strong>{filteredJobs.length}</strong> von {jobs.length} Treffern</div>
-              </div>
-
-
-              {!selectedSourceStillAvailable && (
-                <div className="filter-notice">
-                  Für {selectedSource} sind in den aktuell geladenen Treffern keine Angebote mehr vorhanden.
-                </div>
-              )}
-
-              {filteredJobs.length > 0 ? (
-                <div className="job-list">
-                  {filteredJobs.map((job) => (
-                    <JobCard key={job.id} job={job} darkMode={darkMode} isSaved={savedJobs.some(j => j.url === job.url)} onToggleSave={toggleSaveJob} />
-                  ))}
-                </div>
-              ) : selectedSourceStillAvailable ? (
-                <div className="filter-notice">
-                  Für {selectedSource} sind in den geladenen Treffern gerade keine Angebote sichtbar.
-                </div>
-              ) : null}
-
-              <div className="load-more-wrap">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="load-more-button"
-                >
-                  <i className={`fas ${loadingMore ? 'fa-circle-notch fa-spin' : 'fa-plus'}`}></i>
-                  <span>Weitere Chancen anzeigen</span>
-                </button>
-                {loadMoreNotice && (
-                  <p className="load-more-notice">
-                    {loadMoreNotice}
-                  </p>
-                )}
-              </div>
-            </section>
-          </div>
+            <div className="load-more-wrap">
+              <button onClick={handleLoadMore} disabled={loadingMore} className="load-more-button">
+                <i className={`fas ${loadingMore ? 'fa-circle-notch fa-spin' : 'fa-plus'}`} aria-hidden="true"></i>
+                <span>{loadingMore ? 'Suche läuft …' : 'Weitere Stellen laden'}</span>
+              </button>
+              {loadMoreNotice && <p className="load-more-notice">{loadMoreNotice}</p>}
+            </div>
+          </section>
         )}
 
         {/* Empty State / Intro */}

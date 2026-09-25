@@ -31,6 +31,22 @@ const JobCard: React.FC<JobCardProps> = ({ job, darkMode = false, isSaved = fals
         : job.workMode
           ? { label: 'Arbeitsort prüfen', icon: 'fa-circle-question', className: 'job-tag--unknown' }
           : null;
+  const hasScheduleConflict = (job.maxWeeklyHours !== undefined && job.maxWeeklyHours !== null && job.maxWeeklyHours > 20)
+    || job.saturdayWork === 'ja'
+    || job.fridayAfternoonWork === 'ja';
+  const scheduleConfirmed = job.maxWeeklyHours !== undefined && job.maxWeeklyHours !== null && job.maxWeeklyHours <= 20
+    && job.saturdayWork === 'nein'
+    && job.fridayAfternoonWork === 'nein';
+  const scheduleLabel = hasScheduleConflict
+    ? 'Zeitmodell weicht ab'
+    : scheduleConfirmed
+      ? 'Zeiten bestätigt'
+      : 'Arbeitszeiten prüfen';
+  const scheduleClass = hasScheduleConflict
+    ? 'job-tag--conflict'
+    : scheduleConfirmed
+      ? 'job-tag--schedule'
+      : 'job-tag--verify';
 
   return (
     <article className={`job-card ${darkMode ? 'is-dark' : ''}`}>
@@ -68,6 +84,10 @@ const JobCard: React.FC<JobCardProps> = ({ job, darkMode = false, isSaved = fals
 
       <div className="job-card__bottom">
         <div className="job-card__tags" aria-label="Eckdaten zur Stelle">
+          <span className={`job-tag ${scheduleClass}`}>
+            <i className={`fas ${hasScheduleConflict ? 'fa-circle-xmark' : scheduleConfirmed ? 'fa-circle-check' : 'fa-circle-question'}`} aria-hidden="true"></i>
+            {scheduleLabel}
+          </span>
           {job.maxWeeklyHours !== undefined && job.maxWeeklyHours !== null && (
             <span className="job-tag job-tag--hours"><i className="fas fa-clock" aria-hidden="true"></i>Bis {job.maxWeeklyHours} Std./Woche</span>
           )}
@@ -89,7 +109,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, darkMode = false, isSaved = fals
         </div>
       </div>
 
-      {job.scheduleEvidence && (
+      {job.scheduleEvidence && job.scheduleEvidence !== 'Details im Inserat' && (
         <p className="job-card__evidence"><strong>Hinweis zu den Arbeitszeiten:</strong> {job.scheduleEvidence}</p>
       )}
     </article>
