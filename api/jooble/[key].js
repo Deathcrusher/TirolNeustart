@@ -1,4 +1,8 @@
+import { requireAuth } from '../../lib/auth.js';
+
 export default async function handler(request, response) {
+  if (!requireAuth(request, response)) return;
+
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
     response.status(405).json({ error: 'Method not allowed' });

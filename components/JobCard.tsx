@@ -44,6 +44,36 @@ const JobCard: React.FC<JobCardProps> = ({ job, darkMode = false, isSaved = fals
               {job.title}
             </h3>
 
+            {(job.maxWeeklyHours !== undefined || job.workMode || job.scheduleEvidence) && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {job.maxWeeklyHours !== undefined && job.maxWeeklyHours !== null && (
+                  <span className={`rounded-md px-2 py-1 text-xs font-bold ${darkMode ? 'bg-sky-950 text-sky-200' : 'bg-sky-50 text-sky-800'}`}>
+                    Bis {job.maxWeeklyHours} Std./Woche
+                  </span>
+                )}
+                {job.workMode && (
+                  <span className={`rounded-md px-2 py-1 text-xs font-bold ${darkMode ? 'bg-violet-950 text-violet-200' : 'bg-violet-50 text-violet-800'}`}>
+                    {job.workMode === 'remote' ? 'Remote' : job.workMode === 'hybrid' ? 'Hybrid' : job.workMode === 'vor Ort' ? 'Vor Ort' : 'Arbeitsort prüfen'}
+                  </span>
+                )}
+                {job.saturdayWork === 'nein' && (
+                  <span className={`rounded-md px-2 py-1 text-xs font-bold ${darkMode ? 'bg-emerald-950 text-emerald-200' : 'bg-emerald-50 text-emerald-800'}`}>
+                    Samstag frei
+                  </span>
+                )}
+                {job.fridayAfternoonWork === 'nein' && (
+                  <span className={`rounded-md px-2 py-1 text-xs font-bold ${darkMode ? 'bg-emerald-950 text-emerald-200' : 'bg-emerald-50 text-emerald-800'}`}>
+                    Freitag nachmittags frei
+                  </span>
+                )}
+                {job.scheduleEvidence && (
+                  <span className={`w-full text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Zeitangaben: {job.scheduleEvidence}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className={`mb-3 flex flex-col gap-2 text-sm font-semibold sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-2 ${darkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
               <span className="inline-flex min-w-0 items-center gap-2">
                 <i className="fas fa-building text-zinc-400"></i>

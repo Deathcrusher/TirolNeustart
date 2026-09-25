@@ -1,3 +1,4 @@
+import { requireAuth } from '../lib/auth.js';
 import { searchCustomSources } from '../server/jobSources/index.js';
 import { dedupeJobs } from '../server/jobs/dedupe.js';
 
@@ -24,6 +25,23 @@ function sourceGroup(source = '') {
   return source || 'Unbekannt';
 }
 
+function classifyWorkMode(job = {}) {
+  const text = [
+    job.workMode,
+    job.remote,
+    job.workplaceType,
+    job.title,
+    job.location,
+    job.snippet,
+    job.description,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (/hybrid|home[ -]?office\s+(?:möglich|option|anteilig)|mobiles arbeiten\s+möglich/.test(text)) return 'hybrid';
+  if (/\bremote\b|home[ -]?office|ortsunabhängig|fully remote|100\s*%\s*(?:remote|homeoffice)/.test(text)) return 'remote';
+  if (/vor ort|onsite|on-site|präsenzpflicht/.test(text)) return 'vor Ort';
+  return 'unklar';
+}
+
 function diversifyBySource(jobs, limit) {
   const buckets = new Map();
   jobs.forEach((job) => {
@@ -45,7 +63,7 @@ function diversifyBySource(jobs, limit) {
   return mixed;
 }
 
-async function fetchJooble({ apiKey, query, location, page }) {
+async function fetchJooble({ apiKey, query, location, page, remoteOnly }) {
   if (!apiKey) return [];
 
   const response = await fetch(`${JOOBLE_BASE_URL}/${encodeURIComponent(apiKey)}`, {
@@ -54,7 +72,7 @@ async function fetchJooble({ apiKey, query, location, page }) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      keywords: query,
+      keywords: remoteOnly ? `${query} remote homeoffice` : query,
       location,
       radius: '40',
       page: String(page + 1),
@@ -80,10 +98,13 @@ async function fetchJooble({ apiKey, query, location, page }) {
     source: 'Jooble',
     date: job.updated || job.posted || 'Aktuell',
     category: 'Jobportal',
+    workMode: classifyWorkMode(job),
   }));
 }
 
 export default async function handler(request, response) {
+  if (!requireAuth(request, response)) return;
+
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
     response.status(405).json({ error: 'Method not allowed' });
@@ -96,12 +117,15 @@ export default async function handler(request, response) {
     page = 0,
     joobleApiKey = '',
     sourceFilter = '',
+    remoteOnly = false,
   } = request.body || {};
 
   const cleanedQuery = String(query).trim();
   const cleanedLocation = String(location).trim() || 'Tirol';
   const numericPage = Number.isFinite(Number(page)) ? Math.max(0, Number(page)) : 0;
   const cleanedSourceFilter = String(sourceFilter || '').trim();
+  const cleanedRemoteOnly = remoteOnly === true;
+  const sourceQuery = cleanedRemoteOnly ? `${cleanedQuery} Remote Homeoffice` : cleanedQuery;
 
   if (!cleanedQuery) {
     response.status(400).json({ error: 'Missing query' });
@@ -110,7 +134,7 @@ export default async function handler(request, response) {
 
   const [customResult, joobleResult] = await Promise.allSettled([
     searchCustomSources({
-      query: cleanedQuery,
+      query: sourceQuery,
       location: cleanedLocation,
       page: numericPage,
       sourceFilter: cleanedSourceFilter,
@@ -120,10 +144,13 @@ export default async function handler(request, response) {
       query: cleanedQuery,
       location: cleanedLocation,
       page: numericPage,
+      remoteOnly: cleanedRemoteOnly,
     }),
   ]);
 
-  const customJobs = customResult.status === 'fulfilled' ? customResult.value.jobs : [];
+  const customJobs = customResult.status === 'fulfilled'
+    ? customResult.value.jobs.map((job) => ({ ...job, workMode: job.workMode || classifyWorkMode(job) }))
+    : [];
   const joobleJobs = joobleResult.status === 'fulfilled' ? joobleResult.value : [];
   const errors = [
     ...(customResult.status === 'fulfilled' ? customResult.value.errors : [customResult.reason?.message || String(customResult.reason)]),
@@ -133,11 +160,14 @@ export default async function handler(request, response) {
     ...(customResult.status === 'fulfilled' ? customResult.value.sources : ['Custom scrapers']),
     ...(joobleJobs.length > 0 ? ['Jooble'] : []),
   ];
-  const jobs = diversifyBySource(dedupeJobs([...customJobs, ...joobleJobs]), RESULTS_PER_PAGE);
+  const matchingJobs = dedupeJobs([...customJobs, ...joobleJobs]).filter((job) =>
+    !cleanedRemoteOnly || job.workMode === 'remote'
+  );
+  const jobs = diversifyBySource(matchingJobs, RESULTS_PER_PAGE);
 
   response.status(200).json({
     jobs,
-    summary: `${jobs.length} Treffer aus ${sourceNames.join(', ') || 'eigenen Quellen'} für "${cleanedQuery}" in ${cleanedLocation}.`,
+    summary: `${jobs.length} Treffer aus ${sourceNames.join(', ') || 'eigenen Quellen'} für "${cleanedQuery}" in ${cleanedLocation}${cleanedRemoteOnly ? ' (nur Remote)' : ''}.`,
     groundingSources: sourceNames.map((source) => ({
       title: source,
       uri: SOURCE_URIS[source] || 'https://jooble.org',

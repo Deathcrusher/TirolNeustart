@@ -2,13 +2,13 @@
 
 ## Goal
 
-TirolNeustart should not rely on Gemini as the main live scraper. The faster long-term direction is a structured job-data pipeline:
+TirolNeustart combines structured job sources with a separate AI search path for fresh listings:
 
 1. Fetch jobs from APIs and scraper actors.
 2. Normalize all results into one shared shape.
 3. Cache/store the normalized jobs.
 4. Search the cached data quickly from the app.
-5. Use Gemini in the background for enrichment, ranking, summaries, and category detection.
+5. Use GPT-6 Luna with web search for fresh listings and summaries when AI search is selected.
 
 ## Candidate Architecture
 
@@ -20,14 +20,14 @@ React App
     -> other job APIs/scrapers
     -> cache / database
     -> dedupe / ranking
-    -> Gemini enrichment in background
+    -> GPT-6 Luna web search when requested
 ```
 
 For the detailed custom scraping plan, see `docs/scraper-strategy.md`.
 
 ## Why Apify Could Help
 
-Apify can turn job portals into structured JSON sources through reusable or custom actors. This would make providers behave more like APIs and reduce the need for slow live Gemini web searches.
+Apify can turn job portals into structured JSON sources through reusable or custom actors. This would make providers behave more like APIs and reduce the number of live web searches needed.
 
 Useful targets:
 
@@ -39,16 +39,14 @@ Useful targets:
 - AMS
 - Tirol-specific portals and employer career pages
 
-## Gemini Role
+## GPT-6 Luna Role
 
-Gemini should not block the first results screen. It should enrich already structured jobs:
+GPT-6 Luna is called through the server-side Vercel route and should:
 
-- detect if the job is suitable for Quereinsteiger
-- infer category and seniority
-- summarize the listing
-- rank by user intent
-- clean noisy snippets
-- detect duplicate or suspicious listings
+- search for direct, current job listings
+- prioritize Connie's preferences: up to 20 hours per week, no Saturday work, Friday only until noon, and remote work preferred
+- report schedule details only when supported by the listing
+- avoid inventing URLs or work-hour details
 
 ## Caching Strategy
 
@@ -61,10 +59,9 @@ Live scraping every user search will stay slow and brittle. Better:
 
 ## Migration Plan
 
-1. Keep the current Jooble and Gemini modes working.
-2. Add a backend `/api/search-jobs` endpoint.
-3. Move provider calls out of React and behind that endpoint.
-4. Add one Apify actor as a test source.
-5. Normalize and dedupe Jooble plus Apify results.
-6. Add cache/storage.
-7. Move Gemini to background enrichment instead of primary live search.
+1. Keep the scraper/Jooble search path for fast results.
+2. Keep GPT-6 Luna behind `/api/ai-search` with `OPENAI_API_KEY` stored in Vercel.
+3. Move any future provider credentials out of React and behind server routes.
+4. Add more structured job sources as needed.
+5. Normalize and dedupe results across sources.
+6. Add cache/storage when live requests become a bottleneck.

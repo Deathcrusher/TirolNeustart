@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { geminiService } from './services/geminiService';
+import { aiSearchService } from './services/aiSearchService';
 import { joobleService } from './services/joobleService';
 import { jobSearchService } from './services/jobSearchService';
 import { JobListing, GroundingSource, SearchResult } from './types';
@@ -19,18 +19,6 @@ const LOCATION_OPTIONS = [
   'Lienz',
   'Reutte',
   'Telfs',
-];
-
-const GEMINI_MODEL_OPTIONS = [
-  { value: '', label: 'Automatisch' },
-  { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite' },
-  { value: 'gemini-3.1-flash-preview', label: 'Gemini 3.1 Flash' },
-  { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  { value: 'gemma-4-31b-it', label: 'Gemma 4 31B' },
-  { value: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B' },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (schnell)' },
-  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (gründlicher)' },
 ];
 
 const normalizeSourceLabel = (source: string) => {
@@ -58,38 +46,53 @@ const App: React.FC = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedSource, setSelectedSource] = useState('Alle');
   
-// Settings state
+  // Settings state
   const [showSettings, setShowSettings] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [joobleApiKey, setJoobleApiKey] = useState('');
-  const [geminiModel, setGeminiModel] = useState('');
-  const [useJoobleOnly, setUseJoobleOnly] = useState(true);
+  const [useFastSearch, setUseFastSearch] = useState(false);
+  const [remoteOnly, setRemoteOnly] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
   const [showSavedJobs, setShowSavedJobs] = useState(false);
+  const [authChecked, setAuthChecked] = useState(import.meta.env.DEV);
+  const [isAuthenticated, setIsAuthenticated] = useState(import.meta.env.DEV);
+  const [authUsername, setAuthUsername] = useState('admin');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authSetupError, setAuthSetupError] = useState('');
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+
+    fetch('/api/auth', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 503) setAuthSetupError(data.error || 'Der Zugriffsschutz ist nicht eingerichtet.');
+        setIsAuthenticated(response.ok && data.authenticated === true);
+      })
+      .catch(() => setAuthError('Der Anmeldestatus konnte nicht geprüft werden. Bitte lade die Seite erneut.'))
+      .finally(() => setAuthChecked(true));
+  }, []);
 
   // Load settings from localStorage on mount
   useEffect(() => {
     try {
-      const savedApiKey = localStorage.getItem('gemini_api_key') || '';
       const savedJoobleApiKey = localStorage.getItem('jooble_api_key') || '';
-      const savedGeminiModel = localStorage.getItem('gemini_model') || '';
       const savedLocation = localStorage.getItem('job_location') || 'Tirol';
-      const rawUseJooble = localStorage.getItem('use_jooble_only');
-      const savedUseJooble = rawUseJooble === null ? true : rawUseJooble === 'true';
+      const savedUseJooble = localStorage.getItem('use_fast_search') === 'true';
+      const savedRemoteOnly = localStorage.getItem('remote_only') === 'true';
       const savedDarkMode = localStorage.getItem('dark_mode') === 'true';
       const savedJobsJson = localStorage.getItem('saved_jobs') || '[]';
       const parsedSavedJobs = JSON.parse(savedJobsJson) as JobListing[];
-      setGeminiApiKey(savedApiKey);
+      localStorage.removeItem('gemini_api_key');
+      localStorage.removeItem('gemini_model');
       setJoobleApiKey(savedJoobleApiKey);
-      setGeminiModel(savedGeminiModel);
       setLocation(savedLocation);
       setActiveLocation(savedLocation);
-      setUseJoobleOnly(savedUseJooble);
+      setUseFastSearch(savedUseJooble);
+      setRemoteOnly(savedRemoteOnly);
       setDarkMode(savedDarkMode);
       setSavedJobs(parsedSavedJobs);
-      geminiService.setApiKey(savedApiKey);
-      geminiService.setModel(savedGeminiModel);
       joobleService.setApiKey(savedJoobleApiKey);
     } catch (e) {}
   }, []);
@@ -112,17 +115,47 @@ const App: React.FC = () => {
 
   const saveSettings = () => {
     try {
-      localStorage.setItem('gemini_api_key', geminiApiKey);
       localStorage.setItem('jooble_api_key', joobleApiKey);
-      localStorage.setItem('gemini_model', geminiModel);
       localStorage.setItem('job_location', location);
-      localStorage.setItem('use_jooble_only', String(useJoobleOnly));
+      localStorage.setItem('use_fast_search', String(useFastSearch));
       localStorage.setItem('dark_mode', String(darkMode));
-      geminiService.setApiKey(geminiApiKey);
-      geminiService.setModel(geminiModel);
       joobleService.setApiKey(joobleApiKey);
       setShowSettings(false);
     } catch (e) {}
+  };
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setAuthError('');
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ username: authUsername, password: authPassword }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 503) setAuthSetupError(data.error || 'Der Zugriffsschutz ist nicht eingerichtet.');
+        setAuthError(data.error || 'Die Anmeldung ist fehlgeschlagen.');
+        return;
+      }
+      setAuthPassword('');
+      setIsAuthenticated(true);
+    } catch {
+      setAuthError('Der Anmeldedienst ist gerade nicht erreichbar. Bitte versuche es erneut.');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth', { method: 'DELETE', credentials: 'same-origin' });
+      if (!response.ok) throw new Error('Abmeldung fehlgeschlagen.');
+      setIsAuthenticated(false);
+      setAuthError('');
+    } catch {
+      setAuthError('Die Abmeldung hat nicht geklappt. Bitte versuche es erneut.');
+    }
   };
 
   const getFriendlyError = (err: any) => {
@@ -130,15 +163,22 @@ const App: React.FC = () => {
     if (message.includes('Jooble API Error: 404')) {
       return 'Jooble meldet 404. Das liegt oft an einem ungültigen API-Key ODER daran, dass kein Proxy aktiv ist. Key prüfen (jooble.org/api/about), neu speichern und die Anfrage erneut testen.';
     }
-    if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
-      return 'Gemini API-Limit erreicht (429). Wichtig: Das Limit hängt am Google-Cloud-Projekt, nicht am einzelnen Key. Prüfe in AI Studio/Cloud Console das aktive Projekt (Quota, Billing, API-Key-Restriktionen) und teste ggf. ein neues Projekt mit neuem Key.';
+    if (message.includes('OPENAI_API_KEY')) {
+      return 'Der OpenAI API-Key fehlt. Hinterlege OPENAI_API_KEY in den Vercel-Umgebungsvariablen und deploye die App erneut.';
+    }
+    if (message.includes('OpenAI hat den API-Schlüssel abgelehnt')) {
+      return message;
+    }
+    if (message.includes('OpenAI-Limit')) {
+      return message;
     }
     return `Hoppla, da lief was schief: ${message || 'Unbekannter Fehler'}.`;
   };
 
-  const handleSearch = async (e?: React.FormEvent, customQuery?: string) => {
+  const handleSearch = async (e?: React.FormEvent, customQuery?: string, remoteOnlyOverride?: boolean) => {
     if (e) e.preventDefault();
     const targetQuery = customQuery || query;
+    const activeRemoteOnly = remoteOnlyOverride ?? remoteOnly;
     if (!targetQuery.trim()) return;
 
     // Update state to reflect what is being searched if triggered via button
@@ -157,11 +197,11 @@ const App: React.FC = () => {
     try {
       let data: SearchResult | null = null;
       
-      // Use Jooble API if enabled, otherwise use Gemini with web scraping
-      if (useJoobleOnly) {
-        data = await jobSearchService.searchJobs(targetQuery, location, 0);
+      // Use the scraper/Jooble path only when fast search is selected.
+      if (useFastSearch) {
+        data = await jobSearchService.searchJobs(targetQuery, location, 0, '', activeRemoteOnly);
       } else {
-        data = await geminiService.searchJobs(targetQuery, undefined, 0, location);
+        data = await aiSearchService.searchJobs(targetQuery, 0, location, [], activeRemoteOnly);
       }
       
       setJobs(data.jobs);
@@ -190,11 +230,11 @@ const App: React.FC = () => {
       let newUniqueJobs: JobListing[] = [];
       const currentUrls = new Set(jobs.map(j => j.url));
       
-      // Use Jooble API if enabled, otherwise use Gemini with web scraping
-      if (useJoobleOnly) {
+      // Use the scraper/Jooble path only when fast search is selected.
+      if (useFastSearch) {
         for (let attempt = 0; attempt < 3; attempt++) {
           nextPage += 1;
-          data = await jobSearchService.searchJobs(activeQuery, activeLocation, nextPage, selectedSource === 'Alle' ? '' : selectedSource);
+          data = await jobSearchService.searchJobs(activeQuery, activeLocation, nextPage, selectedSource === 'Alle' ? '' : selectedSource, remoteOnly);
           newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
 
           if (newUniqueJobs.length > 0 || data.jobs.length === 0) {
@@ -204,9 +244,7 @@ const App: React.FC = () => {
 
         setCurrentPage(nextPage);
       } else {
-        data = await geminiService.searchJobs(activeQuery, undefined, jobs.length, activeLocation, {
-          knownUrls: jobs.map(job => job.url)
-        });
+        data = await aiSearchService.searchJobs(activeQuery, jobs.length, activeLocation, jobs.map(job => job.url), remoteOnly);
         newUniqueJobs = data.jobs.filter(j => !currentUrls.has(j.url));
       }
 
@@ -232,14 +270,14 @@ const App: React.FC = () => {
     setSelectedSource(source);
     setLoadMoreNotice(null);
 
-    if (source === 'Alle' || !useJoobleOnly || loading || loadingMore) return;
+    if (source === 'Alle' || !useFastSearch || loading || loadingMore) return;
 
     const existingSourceJobs = jobs.filter((job) => normalizeSourceLabel(job.source) === source);
     if (existingSourceJobs.length > 0) return;
 
     setLoadingMore(true);
     try {
-      const data = await jobSearchService.searchJobs(activeQuery, activeLocation, 0, source);
+      const data = await jobSearchService.searchJobs(activeQuery, activeLocation, 0, source, remoteOnly);
       const currentUrls = new Set(jobs.map((job) => job.url));
       const newUniqueJobs = data.jobs.filter((job) => !currentUrls.has(job.url));
 
@@ -286,6 +324,65 @@ const App: React.FC = () => {
     : jobs.filter((job) => normalizeSourceLabel(job.source) === selectedSource);
   const selectedSourceStillAvailable = selectedSource === 'Alle' || sourceOptions.includes(selectedSource);
 
+  if (!authChecked || !isAuthenticated) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 text-zinc-800">
+        <section className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-7 shadow-xl sm:p-9">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
+              <i className="fas fa-seedling text-xl"></i>
+            </div>
+            <div>
+              <h1 className="text-xl font-black">Tirol<span className="text-emerald-600">Neustart</span></h1>
+              <p className="text-sm text-zinc-500">Private Jobsuche</p>
+            </div>
+          </div>
+
+          {!authChecked ? (
+            <p className="py-4 text-sm text-zinc-600">Zugriff wird geprüft …</p>
+          ) : authSetupError ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-bold">Der Zugriffsschutz ist noch nicht eingerichtet.</p>
+              <p className="mt-2">{authSetupError}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="access-username" className="mb-2 block text-sm font-bold">Benutzername</label>
+                <input
+                  id="access-username"
+                  type="text"
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  value={authUsername}
+                  onChange={(event) => setAuthUsername(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="access-password" className="mb-2 block text-sm font-bold">Zugangspasswort</label>
+                <input
+                  id="access-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={authPassword}
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                />
+              </div>
+              {authError && <p role="alert" className="text-sm font-medium text-red-600">{authError}</p>}
+              <button type="submit" className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white transition hover:bg-emerald-700">
+                Anmelden
+              </button>
+            </form>
+          )}
+        </section>
+      </main>
+    );
+  }
+
   return (
     <div className={`min-h-screen flex flex-col font-sans ${darkMode ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-50 text-slate-800'}`}>
       {/* Navbar */}
@@ -301,6 +398,16 @@ const App: React.FC = () => {
              </div>
           </div>
           <div className="flex items-center gap-2">
+             {!import.meta.env.DEV && (
+               <button
+                 onClick={() => void handleLogout()}
+                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${darkMode ? 'bg-zinc-700 text-zinc-300 hover:bg-red-900 hover:text-red-200' : 'bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-700'}`}
+                 aria-label="Abmelden"
+               >
+                 <i className="fas fa-sign-out-alt"></i>
+                 <span className="hidden md:inline">Abmelden</span>
+               </button>
+             )}
              <button
                onClick={() => setShowSavedJobs(!showSavedJobs)}
                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-semibold relative ${showSavedJobs ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : darkMode ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
@@ -342,45 +449,13 @@ const App: React.FC = () => {
             </div>
             
             <div className="space-y-6">
-              {/* Gemini API Key Setting */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  <i className="fas fa-key text-emerald-500 mr-2"></i>
-                  Gemini API Key
-                </label>
-                <input
-                  type="password"
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="Gib deinen API Key ein..."
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition-all font-medium"
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  Hol dir deinen kostenlosen API Key bei{' '}
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
-                    Google AI Studio
-                  </a>
+              <div className="rounded-lg border-2 border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950">
+                <p className="font-bold text-emerald-900 dark:text-emerald-100">
+                  <i className="fas fa-wand-magic-sparkles mr-2"></i>
+                  KI-Suche mit GPT-6 Luna
                 </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  <i className="fas fa-microchip text-emerald-500 mr-2"></i>
-                  Gemini Modell
-                </label>
-                <select
-                  value={geminiModel}
-                  onChange={(e) => setGeminiModel(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition-all font-medium"
-                >
-                  {GEMINI_MODEL_OPTIONS.map((model) => (
-                    <option key={model.value || 'auto'} value={model.value}>
-                      {model.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500 mt-2">
-                  Neuere Modelle stehen oben. Falls ein Modell für deinen Key nicht freigeschaltet ist, wird automatisch das nächste probiert.
+                <p className="mt-2 text-xs leading-relaxed text-emerald-800 dark:text-emerald-200">
+                  Der OpenAI API-Key wird serverseitig in Vercel unter <code>OPENAI_API_KEY</code> gespeichert. Er wird nicht im Browser abgelegt.
                 </p>
               </div>
 
@@ -417,10 +492,10 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => setUseJoobleOnly(!useJoobleOnly)}
-                  className={`relative w-14 h-8 rounded-lg transition-colors ${useJoobleOnly ? 'bg-emerald-500' : 'bg-slate-300'} dark:${useJoobleOnly ? 'bg-emerald-500' : 'bg-slate-600'}`}
+                  onClick={() => setUseFastSearch(!useFastSearch)}
+                  className={`relative w-14 h-8 rounded-lg transition-colors ${useFastSearch ? 'bg-emerald-500' : 'bg-slate-300'} dark:${useFastSearch ? 'bg-emerald-500' : 'bg-slate-600'}`}
                 >
-                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-md shadow-md transition-transform ${useJoobleOnly ? 'left-7' : 'left-1'}`}></div>
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-md shadow-md transition-transform ${useFastSearch ? 'left-7' : 'left-1'}`}></div>
                 </button>
               </div>
 
@@ -469,9 +544,36 @@ const App: React.FC = () => {
             </div>
             <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-emerald-900 dark:border-emerald-800 dark:text-emerald-200">
               <i className="fas fa-bolt"></i>
-              {useJoobleOnly ? 'Schnelle Suche aktiv' : 'KI-Suche aktiv'}
+              {useFastSearch ? 'Schnelle Suche aktiv' : 'GPT-6-Luna-Suche aktiv'}
             </div>
           </div>
+
+          <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${darkMode ? 'border-zinc-700 bg-zinc-900 text-zinc-300' : 'border-emerald-100 bg-emerald-50 text-emerald-900'}`}>
+            <span className="font-bold">Bei der KI-Suche berücksichtigt:</span>{' '}
+            Teilzeit bis 20 Stunden pro Woche · Samstag frei · Freitag nur bis Mittag · Homeoffice bevorzugt
+          </div>
+
+          <label className={`mb-4 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-bold ${darkMode ? 'border-zinc-700 bg-zinc-900 text-zinc-200' : 'border-zinc-200 bg-white text-zinc-800'}`}>
+            <input
+              type="checkbox"
+              checked={remoteOnly}
+              onChange={(event) => {
+                const nextRemoteOnly = event.target.checked;
+                setRemoteOnly(nextRemoteOnly);
+                try {
+                  localStorage.setItem('remote_only', String(nextRemoteOnly));
+                } catch (error) {}
+                if (hasSearched) {
+                  void handleSearch(undefined, query || activeQuery, nextRemoteOnly);
+                }
+              }}
+              className="h-5 w-5 accent-emerald-600"
+            />
+            <span className="flex-1">Nur Remote-Jobs anzeigen</span>
+            <span className={`text-xs font-medium ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+              {remoteOnly ? 'Aktiv' : 'Alle Arbeitsorte'}
+            </span>
+          </label>
 
           <form onSubmit={(e) => handleSearch(e)} className={`grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_220px_auto] ${darkMode ? 'border-zinc-700 bg-zinc-900' : 'border-zinc-200 bg-zinc-50'}`}>
             <label className="block">
@@ -481,7 +583,7 @@ const App: React.FC = () => {
                 <input
                   type="text"
                   className={`block w-full rounded-lg border py-4 pl-10 pr-4 font-semibold outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${darkMode ? 'border-zinc-700 bg-zinc-800 text-white placeholder-zinc-400' : 'border-zinc-200 bg-white text-zinc-900'}`}
-                  placeholder="Quereinsteiger, Verkauf, Service, Lager..."
+                  placeholder="Teilzeitstelle, Beauty, Verkauf, Service, Büro..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -714,7 +816,7 @@ onClick={handleLoadMore}
         {/* Sources */}
         {sources.length > 0 && !loading && (
            <div className="mt-16 text-center">
-             <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${darkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Geprüfte Job-Quellen</p>
+             <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${darkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Quellen der Suche</p>
              <div className={`flex flex-wrap justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity ${darkMode ? 'opacity-40 hover:opacity-80' : ''}`}>
                {sources.map((s, i) => (
                  <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className={`text-[10px] hover:text-emerald-600 bg-white border px-2 py-1 rounded hover:border-emerald-300 transition-colors truncate max-w-[150px] ${darkMode ? 'text-zinc-400 border-zinc-700 bg-zinc-800' : 'text-slate-500 border-slate-200'}`}>

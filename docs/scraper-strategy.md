@@ -13,7 +13,7 @@ many job sites
   -> dedupe
   -> cache/database
   -> fast search API
-  -> Gemini enrichment in background
+  -> optional GPT-6 Luna web search
 ```
 
 ## Why Not One Scraper For Everything
@@ -132,17 +132,16 @@ Verkäufer m/w/d / Müller GmbH / Innsbruck
 
 These may be the same job and should be merged or ranked together.
 
-## Gemini Role
+## GPT-6 Luna Role
 
-Gemini should enrich structured jobs after scraping:
+GPT-6 Luna should be called through the server-side Vercel API route for AI-backed search:
 
-- classify category
-- detect Quereinsteiger suitability
-- summarize noisy snippets
-- rank jobs for the user query
-- mark suspicious or low-quality results
+- find current direct job listings
+- honor the configured hours and weekday constraints
+- prefer remote jobs when other criteria are comparable
+- summarize work-hour evidence from the listing
 
-Gemini should not be the main live scraper because web-grounded search is slower and less predictable than cached structured data.
+Structured sources remain the fast path. GPT-6 Luna's live web search is a separate path for fresh results and uses the server-only `OPENAI_API_KEY` environment variable.
 
 ## Legal And Operational Checks
 
@@ -191,7 +190,7 @@ The current project is mostly frontend plus small API proxy code. A real scraper
 6. Add `/api/search-jobs`.
 7. Move the UI to call `/api/search-jobs`.
 8. Add more source adapters one by one.
-9. Add Gemini background enrichment.
+9. Add GPT-6 Luna enrichment through the server-side search route where it improves results.
 10. Add monitoring/logging for broken sources.
 
 ## Current Prototype

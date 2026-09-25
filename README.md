@@ -1,14 +1,15 @@
-# Tirol Neustart - Jobbörse für Quereinsteiger
+# Tirol Neustart - Jobsuche für Connie
 
-Eine moderne React-App zur Jobsuche für Quereinsteiger in Tirol.
+Eine React-App zur Jobsuche in Tirol. Die GPT-6-Luna-Suche berücksichtigt Connies Wünsche: Teilzeit bis 20 Wochenstunden, samstags frei, freitags nur bis Mittag und Homeoffice bevorzugt.
 
 ## Features
 
-- **Schnelle Suche** (Standard) - Kombiniert eigene Backend-Scraper mit Jooble
+- **GPT-6 Luna KI-Suche** (Standard) - Sucht aktuelle Inserate über die OpenAI Responses API mit Websuche
 - **Eigene Scraper-Pipeline** - Modulare Quellen für `jobs.tt.com`, `tirolerjobs.at`, `hokify.at`, `ÖH Jobbörse`, `StepStone AT`, `karriere.at`, `METAJob` und weitere Adapter
-- **Google Gemini KI-Suche** (Optional) - Intelligente Suche mit KI-Unterstützung
 - **Umschaltbare Suchmodi** - Wechsle zwischen schneller Backend-Suche und KI-Suche
-- **Lokale API-Key Speicherung** - Gemini Key wird sicher im Browser gespeichert
+- **Nur-Remote-Filter** - Zeigt ausschließlich eindeutig als vollständig remote erkannte Stellen und startet eine laufende Suche beim Umschalten erneut
+- **Serverseitiger API-Key** - `OPENAI_API_KEY` bleibt in der Vercel-Umgebung und wird nicht an den Browser ausgeliefert
+- **Passwortschutz** - Ein gemeinsames Zugangspasswort sperrt die App sowie alle API-Endpunkte; angemeldet bleibt man sieben Tage
 - **Responsives Design** - Optimiert für Mobile und Desktop
 - **Kategorien-Filter** - Vorgefertigte Suchen für verschiedene Berufsfelder
 
@@ -32,7 +33,7 @@ npm run build
 
 ## Nutzung
 
-### Schnelle Suche (Standard)
+### Schnelle Suche
 - Nutzt `/api/search-jobs`, um eigene Scraper und Jooble zu kombinieren
 - Funktioniert auch ohne Jooble-Key über eigene Scraper (`jobs.tt.com`, `tirolerjobs.at`, `hokify.at`, `ÖH Jobbörse`, `StepStone AT`, `karriere.at`, `METAJob`)
 - `AMS alle jobs` ist vorbereitet, blockiert aber aktuell unauthentifizierte Server-API-Anfragen
@@ -41,23 +42,19 @@ npm run build
 - Verwendet im Dev-Modus für Jooble weiterhin einen Vite-Proxy (`/api/jooble`), um CORS-Fehler zu vermeiden
 - Siehe auch `docs/scraper-strategy.md`
 
-### Gemini KI-Suche (Optional)
-1. Klicke auf das Zahnrad-Icon oben rechts
-2. Gib deinen Google Gemini API Key ein
-3. Wechsle den Suchmodus auf "KI-Suche"
-4. Die KI durchsucht mehrere Jobbörsen gleichzeitig
-5. Das System versucht automatisch aktuelle Flash-Modelle (beginnend mit `gemini-3.1-flash-lite-preview`) und fällt bei Bedarf auf kompatible Modelle zurück
+### GPT-6 Luna KI-Suche
+Die KI-Suche verwendet GPT-6 Luna und die OpenAI Websuche. Sie ist für Arbeitszeitregeln und Connies Suchprofil ausgelegt. Der OpenAI-Key muss in Vercel als serverseitige Umgebungsvariable `OPENAI_API_KEY` gesetzt werden.
 
-API Key holen: https://aistudio.google.com/app/apikey
+## Umgebungsvariablen
 
-## Umgebungsvariablen (Optional)
+In Vercel unter **Settings → Environment Variables** folgende Secrets hinzufügen und danach neu deployen:
 
-Für die Verwendung eines festen API Keys (statt Eingabe im UI):
+- `OPENAI_API_KEY` - OpenAI API-Key, ausschließlich serverseitig
+- `APP_ACCESS_USER` - Login-Benutzername (optional; Standard ist `admin`)
+- `APP_ACCESS_PASSWORD` - langes, eigenes Passwort für Connie und dich
+- `AUTH_SECRET` - zufälliger Signaturschlüssel mit mindestens 32 zufälligen Bytes
 
-```bash
-cp .env.example .env.local
-# Bearbeite .env.local und füge deinen Key ein
-```
+Keinen dieser Werte mit `VITE_` prefixen. Ohne `APP_ACCESS_PASSWORD` und `AUTH_SECRET` bleiben alle Such-APIs gesperrt. Zum Abmelden oder Widerrufen aller bestehenden Sitzungen `AUTH_SECRET` ändern.
 
 ## Technologien
 
@@ -66,7 +63,7 @@ cp .env.example .env.local
 - Tailwind CSS
 - Vite
 - Jooble API
-- Google Gemini AI (optional)
+- OpenAI Responses API mit GPT-6 Luna
 
 ## Lizenz
 

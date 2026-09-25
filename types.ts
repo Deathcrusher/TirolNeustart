@@ -9,6 +9,11 @@ export interface JobListing {
   source: string;
   date?: string;
   category?: string;
+  maxWeeklyHours?: number | null;
+  saturdayWork?: 'ja' | 'nein' | 'unklar';
+  fridayAfternoonWork?: 'ja' | 'nein' | 'unklar';
+  workMode?: 'remote' | 'hybrid' | 'vor Ort' | 'unklar';
+  scheduleEvidence?: string;
 }
 
 export interface GroundingSource {
